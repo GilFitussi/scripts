@@ -73,6 +73,12 @@ async function insertDocument(db, collectionName, doc) {
   }
 }
 
+async function insertMultipleDocuments(db, collectionName, docs) {
+  for (const doc of docs) {
+    await insertDocument(db, collectionName, doc);
+  }
+}
+
 async function updateDocuments(db, collectionName, filter, update) {
   if (config.dryRun) {
     const docs = await db.collection(collectionName).find(filter).toArray();
@@ -101,7 +107,9 @@ async function runMigration() {
   logger.info(`Starting migration (DRY_RUN=${config.dryRun})`);
   logger.info(`Tag: ${TAG}`);
 
-  await insertDocument(db, "x", { name: "X1", createdAt: new Date(TAG) });
+  const xData = JSON.parse(fs.readFileSync(config.dataFile, "utf-8"));
+  await insertMultipleDocuments(db, "x", xData);
+
   await insertDocument(db, "y", { name: "Y1", createdAt: new Date(TAG) });
   await updateDocuments(db, "z", { status: "old" }, { $set: { status: "new", updatedAt: new Date(TAG) } });
 
