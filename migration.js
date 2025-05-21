@@ -26,7 +26,8 @@ const config = {
   dbName: "test_db",
   dryRun: process.env.DRY_RUN === "true",
   migrationDir: path.resolve(__dirname, "migrations"),
-  dataFile: path.resolve(__dirname, "x_data.json")
+  dataFile: path.resolve(__dirname, "x_data.json"),
+  templateFile: path.resolve(__dirname, "x_template.json")
 };
 
 module.exports = config;
@@ -74,8 +75,20 @@ async function insertDocument(db, collectionName, doc) {
   }
 }
 
-async function insertMultipleDocuments(db, collectionName, docs) {
-  for (const doc of docs) {
+function applyTemplate(template, data) {
+  const templateStr = JSON.stringify(template);
+  const substituted = templateStr.replace(/\{\{(.*?)\}\}/g, (_, key) => {
+    if (key === 'createdAt') return new Date().toISOString();
+    if (key === 'tag') return TAG;
+    return data[key.trim()] ?? "";
+  });
+  return JSON.parse(substituted);
+}
+
+async function insertMultipleDocuments(db, collectionName, rawItems) {
+  const template = JSON.parse(fs.readFileSync(config.templateFile, "utf-8"));
+  for (const item of rawItems) {
+    const doc = collectionName === "x" ? applyTemplate(template, item) : item;
     await insertDocument(db, collectionName, doc);
   }
 }
@@ -108,8 +121,8 @@ async function runMigration() {
   logger.info(`Starting migration (DRY_RUN=${config.dryRun})`);
   logger.info(`Tag: ${TAG}`);
 
-  const xData = JSON.parse(fs.readFileSync(config.dataFile, "utf-8"));
-  await insertMultipleDocuments(db, "x", xData);
+  const xRawData = JSON.parse(fs.readFileSync(config.dataFile, "utf-8"));
+  await insertMultipleDocuments(db, "x", xRawData);
 
   await insertDocument(db, "y", { name: "Y1", createdAt: new Date(TAG) });
   await updateDocuments(db, "z", { status: "old" }, { $set: { status: "new", updatedAt: new Date(TAG) } });
