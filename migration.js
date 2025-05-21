@@ -25,7 +25,8 @@ const config = {
   mongoUri: process.env.MONGO_URI,
   dbName: "test_db",
   dryRun: process.env.DRY_RUN === "true",
-  migrationDir: path.resolve(__dirname, "migrations")
+  migrationDir: path.resolve(__dirname, "migrations"),
+  dataFile: path.resolve(__dirname, "x_data.json")
 };
 
 module.exports = config;
@@ -119,64 +120,5 @@ async function runMigration() {
 
 runMigration().catch((err) => {
   logger.error("Migration failed: " + err);
-  process.exit(1);
-});
-
-// undo.js
-const fsUndo = require("fs");
-const pathUndo = require("path");
-const { MongoClient: MongoClientUndo, ObjectId } = require("mongodb");
-const configUndo = require("./config");
-const loggerUndo = require("./logger");
-
-const TAG_UNDO = process.argv[2];
-const FILTER_ID = process.argv[3]; // Optional _id to restore only one doc
-
-if (!TAG_UNDO) {
-  console.error("Please provide a tag to undo. Usage: node undo.js <TAG> [optional _id]");
-  process.exit(1);
-}
-
-const FILE_PATH = pathUndo.join(configUndo.migrationDir, `migration_${TAG_UNDO}.json`);
-if (!fsUndo.existsSync(FILE_PATH)) {
-  console.error(`Migration file not found: ${FILE_PATH}`);
-  process.exit(1);
-}
-
-const migrationData = JSON.parse(fsUndo.readFileSync(FILE_PATH, "utf-8"));
-
-async function connectToDBUndo() {
-  const client = new MongoClientUndo(configUndo.mongoUri);
-  await client.connect();
-  return { client, db: client.db(configUndo.dbName) };
-}
-
-async function undoMigration() {
-  const { client, db } = await connectToDBUndo();
-  loggerUndo.info(`Starting undo for tag ${TAG_UNDO}${FILTER_ID ? ` (filtered by _id=${FILTER_ID})` : ""}`);
-
-  const actions = FILTER_ID ? migrationData.actions.filter(a => String(a._id) === FILTER_ID) : migrationData.actions;
-
-  for (const action of actions) {
-    try {
-      if (action.action === "insert" && action.status === "success") {
-        await db.collection(action.collection).deleteOne({ _id: new ObjectId(action._id) });
-        loggerUndo.info(`Deleted inserted doc _id=${action._id} from '${action.collection}'`);
-      }
-      if (action.action === "update" && action.status === "success" && action.previous) {
-        await db.collection(action.collection).replaceOne({ _id: new ObjectId(action._id) }, action.previous);
-        loggerUndo.info(`Restored doc _id=${action._id} in '${action.collection}'`);
-      }
-    } catch (err) {
-      loggerUndo.error(`Undo failed for _id=${action._id} in '${action.collection}': ${err}`);
-    }
-  }
-
-  await client.close();
-  loggerUndo.info("Undo complete.");
-}
-
-undoMigration().catch(err => {
-  loggerUndo.error("Undo script failed: " + err);
   process.exit(1);
 });
