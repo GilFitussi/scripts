@@ -1,0 +1,6 @@
+autoload -Uz vcs_info
+precmd() { vcs_info }
+zstyle ':vcs_info:git:*' formats '%F{cyan} %b%f'
+setopt prompt_subst
+
+PS1='%F{green}%n@%m%f %F{blue}%1~%f ${vcs_info_msg_0_} %(?.%F{green}✔%f.%F{red}✘%f) '
