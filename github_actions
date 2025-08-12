@@ -1,0 +1,419 @@
+
+###################################################################################################
+# EXPLANATION (READ ME FIRST)
+#
+# Goal
+# ----
+# - Keep your desired configuration (spec) per repo OUTSIDE GitHub (e.g., MongoDB/service).
+# - Run a short workflow INSIDE each repo that pulls the spec from your service, applies it
+#   idempotently (topics, hooks, collaborators, properties, branch protection), and reports back.
+# - Your service only performs ~2–3 external calls per repo: ensure repo exists + workflow_dispatch.
+#
+# Why this design?
+# ----------------
+# 1) Security: nobody with repo admin can change your desired state (spec is external).
+# 2) Rate limits: heavy API calls are executed by the repo’s GITHUB_TOKEN (per-repo pool),
+#    not your central App’s rate limit bucket.
+# 3) Maintainability: all logic lives in a single “reconcile-actions” repo (reusable workflow/action).
+#    Target repos only have a tiny YAML that calls your centralized workflow.
+#
+# High-level Flow
+# ---------------
+# Mongo (desiredSpec per repo)  →  Your Service (Node)  →  ensure repo + dispatch workflow
+# GitHub Actions (inside repo)  →  fetch spec from your service  →  apply changes idempotently
+# GitHub Actions (inside repo)  →  POST callback to your service →  you update Mongo state
+#
+# Permissions / Org policy (best practice)
+# ----------------------------------------
+# - Target repo Settings → Actions → Workflow permissions = Read & Write.
+# - Org Actions policy: allow only GitHub & verified creators + explicitly allow your actions repo.
+# - Pin the reusable workflow with a tagged ref: @v1 (or even a commit SHA for extra safety).
+#
+# What if Actions are disabled org-wide?
+# --------------------------------------
+# - Ask the admin to enable “Selected repositories” and allow your actions repo.
+# - If that’s impossible: fall back to “no-actions mode” (your service calls REST directly).
+#
+# What you’ll find below
+# ----------------------
+#   1) RECONCILE-ACTIONS REPO (central):
+#      - .github/workflows/repo-reconcile.yml     (reusable workflow definition)
+#      - .github/actions/repo-reconcile/action.yml (JS action wrapper)
+#      - .github/actions/repo-reconcile/index.js   (the clean logic)
+#
+#   2) TARGET REPO (tiny YAML that calls the reusable workflow):
+#      - .github/workflows/reconcile.yml
+#
+#   3) SERVICE SIDE (Node.js):
+#      - reconcile-actions.mjs (ensure repo + workflow_dispatch)
+#      - api-stubs.mjs (minimal Express stubs for /repo-config and /reconcile/callback)
+#
+###################################################################################################
+
+
+
+###################################################################################################
+# 1) REPO: org/reconcile-actions  (your centralized “actions” repo)
+#    FILE: .github/workflows/repo-reconcile.yml  (REUSABLE WORKFLOW)
+###################################################################################################
+name: Repo Reconcile (Reusable)
+on:
+  workflow_call:
+    inputs:
+      runId:         { required: true, type: string }
+      cfgUrl:        { required: true, type: string }
+      cfgToken:      { required: true, type: string }
+      callbackUrl:   { required: true, type: string }
+      callbackToken: { required: true, type: string }
+
+permissions:
+  contents: write
+  administration: write
+  issues: write
+  pull-requests: write
+  repository-projects: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Keep the workflow short; delegate logic to our local JS Action:
+      - name: Apply repo spec
+        uses: ./.github/actions/repo-reconcile
+        with:
+          runId: ${{ inputs.runId }}
+          cfgUrl: ${{ inputs.cfgUrl }}
+          cfgToken: ${{ inputs.cfgToken }}
+          callbackUrl: ${{ inputs.callbackUrl }}
+          callbackToken: ${{ inputs.callbackToken }}
+
+
+
+###################################################################################################
+# 1) REPO: org/reconcile-actions
+#    FILE: .github/actions/repo-reconcile/action.yml  (LOCAL JS ACTION DEFINITION)
+###################################################################################################
+name: "Repo Reconcile"
+description: "Fetch desired spec from your service and apply it to this repo"
+inputs:
+  runId:         { required: true }
+  cfgUrl:        { required: true }
+  cfgToken:      { required: true }
+  callbackUrl:   { required: true }
+  callbackToken: { required: true }
+runs:
+  using: "node20"
+  main: "index.js"
+
+
+
+###################################################################################################
+# 1) REPO: org/reconcile-actions
+#    FILE: .github/actions/repo-reconcile/index.js  (CLEAN NODE 20 ACTION, NO CURL/BASH)
+###################################################################################################
+/**
+ * Local JS Action (Node 20, no extra npm deps).
+ * - Pulls desired spec from your service (Mongo is the source of truth).
+ * - Applies changes idempotently with the repo's GITHUB_TOKEN (topics, hooks, collaborators,
+ *   custom properties, branch protection).
+ * - Posts a callback to your service with the result.
+ */
+
+function getInput(name, required = false) {
+  const v = process.env[`INPUT_${name.toUpperCase()}`];
+  if (required && !v) { console.error(`Missing input: ${name}`); process.exit(1); }
+  return v;
+}
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const REPO_FULL    = process.env.GITHUB_REPOSITORY;        // "owner/repo"
+const REPO_OWNER   = process.env.GITHUB_REPOSITORY_OWNER;  // "owner"
+if (!GITHUB_TOKEN) { console.error("GITHUB_TOKEN missing (check workflow permissions)."); process.exit(1); }
+if (!REPO_FULL || !REPO_OWNER) { console.error("Missing GitHub context envs."); process.exit(1); }
+const [owner, repo] = REPO_FULL.split("/");
+
+const RUN_ID         = getInput("runId", true);
+const CFG_URL        = getInput("cfgUrl", true);
+const CFG_TOKEN      = getInput("cfgToken", true);
+const CALLBACK_URL   = getInput("callbackUrl", true);
+const CALLBACK_TOKEN = getInput("callbackToken", true);
+
+const API = "https://api.github.com";
+const ghHeaders = () => ({
+  "Authorization": `Bearer ${GITHUB_TOKEN}`,
+  "Accept": "application/vnd.github+json",
+  "Content-Type": "application/json",
+});
+async function gh(method, path, body) {
+  const res = await fetch(`${API}${path}`, { method, headers: ghHeaders(), body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 204) return {};
+  const txt = await res.text();
+  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${txt}`);
+  return txt ? JSON.parse(txt) : {};
+}
+async function fetchJson(url, headers = {}) {
+  const r = await fetch(url, { headers });
+  const t = await r.text();
+  if (!r.ok) throw new Error(`Fetch ${url} -> ${r.status} ${t}`);
+  return t ? JSON.parse(t) : {};
+}
+
+// Idempotent operations
+async function upsertTopics(topics = []) {
+  if (!Array.isArray(topics)) return;
+  await gh("PUT", `/repos/${owner}/${repo}/topics`, { names: topics });
+}
+async function listHooks() {
+  return await gh("GET", `/repos/${owner}/${repo}/hooks?per_page=100`);
+}
+async function upsertWebhooks(hooks = []) {
+  const existing = await listHooks();
+  for (const h of hooks || []) {
+    const found = existing.find(x => x?.config?.url === h.url);
+    const payload = {
+      config: { url: h.url, content_type: h.content_type || "json", secret: h.secret || undefined, insecure_ssl: "0" },
+      events: h.events || ["push"],
+      active: h.active !== false,
+    };
+    if (found) await gh("PATCH", `/repos/${owner}/${repo}/hooks/${found.id}`, payload);
+    else       await gh("POST",  `/repos/${owner}/${repo}/hooks`, payload);
+  }
+}
+async function upsertCollaborators(list = []) {
+  for (const c of list || []) {
+    await gh("PUT", `/repos/${owner}/${repo}/collaborators/${encodeURIComponent(c.username)}`, {
+      permission: c.permission || "push",
+    });
+  }
+}
+async function setRepoProperties(props = []) {
+  if (!Array.isArray(props) || props.length === 0) return;
+  try {
+    await gh("PATCH", `/repos/${owner}/${repo}/properties/values`, {
+      properties: props.map(p => ({ property_name: p.property_name, value: p.value })),
+    });
+  } catch (e) {
+    console.warn(`Skipping properties (maybe not enabled): ${e.message}`);
+  }
+}
+async function setBranchProtection(bp) {
+  if (!bp?.branch) return;
+  await gh("PUT", `/repos/${owner}/${repo}/branches/${encodeURIComponent(bp.branch)}/protection`, {
+    required_status_checks: bp.required_status_checks || null,
+    enforce_admins: !!bp.enforce_admins,
+    required_pull_request_reviews: {
+      required_approving_review_count: bp.required_approving_review_count ?? 1,
+      dismiss_stale_reviews: !!bp.dismiss_stale_reviews,
+      require_code_owner_reviews: !!bp.require_code_owner_reviews,
+    },
+    restrictions: null,
+  });
+}
+
+(async () => {
+  try {
+    // 1) Get desired spec from your service (Mongo-backed)
+    const spec = await fetchJson(CFG_URL, {
+      "Authorization": `Bearer ${CFG_TOKEN}`,
+      "X-Org": REPO_OWNER,
+      "X-Repo": repo,
+      "Content-Type": "application/json",
+    });
+
+    // 2) Apply spec idempotently
+    if (spec.topics)            await upsertTopics(spec.topics);
+    if (spec.webhooks)          await upsertWebhooks(spec.webhooks);
+    if (spec.collaborators)     await upsertCollaborators(spec.collaborators);
+    if (spec.properties)        await setRepoProperties(spec.properties);
+    if (spec.branch_protection) await setBranchProtection(spec.branch_protection);
+
+    // 3) Report success
+    await fetch(CALLBACK_URL, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${CALLBACK_TOKEN}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ org: REPO_OWNER, repo, runId: RUN_ID, status: "success" }),
+    });
+    console.log("✅ Reconcile completed.");
+  } catch (err) {
+    console.error("❌ Reconcile failed:", err.message || err);
+    try {
+      await fetch(CALLBACK_URL, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${CALLBACK_TOKEN}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ org: REPO_OWNER, repo, runId: RUN_ID, status: "error", error: String(err?.message || err) }),
+      });
+    } catch {}
+    process.exit(1);
+  }
+})();
+
+
+
+###################################################################################################
+# 2) REPO: target “business” repo (each repo you reconcile)
+#    FILE: .github/workflows/reconcile.yml  (TINY WORKFLOW THAT CALLS THE REUSABLE WORKFLOW)
+#
+# You can create/update this file by API once. After that, you only need to workflow_dispatch it.
+###################################################################################################
+name: Reconcile
+on:
+  workflow_dispatch:
+    inputs:
+      runId:         { required: true, type: string }
+      cfgUrl:        { required: true, type: string }
+      cfgToken:      { required: true, type: string }
+      callbackUrl:   { required: true, type: string }
+      callbackToken: { required: true, type: string }
+
+permissions:
+  contents: write
+  administration: write
+  issues: write
+  pull-requests: write
+  repository-projects: write
+
+jobs:
+  run:
+    uses: org/reconcile-actions/.github/workflows/repo-reconcile.yml@v1
+    with:
+      runId:         ${{ inputs.runId }}
+      cfgUrl:        ${{ inputs.cfgUrl }}
+      cfgToken:      ${{ inputs.cfgToken }}
+      callbackUrl:   ${{ inputs.callbackUrl }}
+      callbackToken: ${{ inputs.callbackToken }}
+
+
+
+
+###################################################################################################
+# 3) SERVICE SIDE: Node.js script to ensure repo + dispatch the tiny workflow in the target repo
+#    FILE: reconcile-actions.mjs  (no Octokit dep; uses fetch and GitHub REST directly)
+###################################################################################################
+/**
+ * Env required:
+ *   GH_INSTALLATION_TOKEN  - GitHub App installation token
+ *   ORG, REPO              - target repo identifiers
+ *   CFG_URL, CFG_TOKEN     - spec endpoint + bearer to fetch spec (used by the workflow)
+ *   CB_URL,  CB_TOKEN      - callback endpoint + bearer (used by the workflow)
+ */
+import { randomUUID } from "node:crypto";
+
+const GITHUB_API = "https://api.github.com";
+const GH_APP_TOKEN = process.env.GH_INSTALLATION_TOKEN;
+const ORG  = process.env.ORG;
+const REPO = process.env.REPO;
+const CFG_URL = process.env.CFG_URL;
+const CFG_TOKEN = process.env.CFG_TOKEN;
+const CB_URL = process.env.CB_URL;
+const CB_TOKEN = process.env.CB_TOKEN;
+
+if (!GH_APP_TOKEN) throw new Error("Missing GH_INSTALLATION_TOKEN");
+["ORG","REPO","CFG_URL","CFG_TOKEN","CB_URL","CB_TOKEN"].forEach(k => { if (!process.env[k]) throw new Error(`Missing ${k}`); });
+
+const headers = { "Authorization": `Bearer ${GH_APP_TOKEN}`, "Accept": "application/vnd.github+json", "Content-Type": "application/json" };
+async function gh(method, path, body) {
+  const res = await fetch(`${GITHUB_API}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const txt = await res.text();
+  if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${txt}`);
+  return txt ? JSON.parse(txt) : {};
+}
+
+async function ensureRepo() {
+  const get = await fetch(`${GITHUB_API}/repos/${ORG}/${REPO}`, { headers });
+  if (get.ok) return "exists";
+  if (get.status !== 404) throw new Error(`GET repo failed: ${get.status} ${await get.text()}`);
+  await gh("POST", `/orgs/${ORG}/repos`, { name: REPO, private: true, auto_init: true, gitignore_template: "Node", license_template: "mit" });
+  return "created";
+}
+
+async function dispatch() {
+  const runId = randomUUID();
+  await gh("POST", `/repos/${ORG}/${REPO}/actions/workflows/reconcile.yml/dispatches`, {
+    ref: "main",
+    inputs: { runId, cfgUrl: CFG_URL, cfgToken: CFG_TOKEN, callbackUrl: CB_URL, callbackToken: CB_TOKEN }
+  });
+  console.log("Dispatched runId:", runId);
+}
+
+await ensureRepo();
+await dispatch();
+
+
+
+###################################################################################################
+# 3) SERVICE SIDE: Minimal API stubs (Express) for /repo-config and /reconcile/callback
+#    FILE: api-stubs.mjs  (you'll wire these to Mongo in your real service)
+###################################################################################################
+/**
+ * Env:
+ *   CFG_BEARER  - expected bearer for /repo-config
+ *   CB_BEARER   - expected bearer for /reconcile/callback
+ */
+import express from "express";
+
+const app = express();
+app.use(express.json());
+
+function assertBearer(req, expected) {
+  const got = req.headers.authorization || "";
+  if (got !== `Bearer ${expected}`) throw Object.assign(new Error("unauthorized"), { status: 401 });
+}
+
+/**
+ * GET /repo-config
+ * Headers:
+ *   Authorization: Bearer <CFG_BEARER>
+ *   X-Org: <org>, X-Repo: <repo>
+ * Return:
+ *   desiredSpec JSON (what the workflow should apply)
+ */
+app.get("/repo-config", (req, res, next) => {
+  try {
+    assertBearer(req, process.env.CFG_BEARER);
+    const org  = req.get("X-Org");
+    const repo = req.get("X-Repo");
+    if (!org || !repo) throw Object.assign(new Error("missing X-Org/X-Repo"), { status: 400 });
+
+    // TODO: load from Mongo by (org, repo). Below is a small example spec:
+    const spec = {
+      topics: ["infra", "nodejs", "service"],
+      webhooks: [{ url: "https://example.com/hook", events: ["push","pull_request"], secret: "REPLACE_ME", active: true }],
+      collaborators: [{ username: "octocat", permission: "push" }],
+      properties: [{ property_name: "tier", value: "gold" }],
+      branch_protection: { branch: "main", enforce_admins: true, required_approving_review_count: 1,
+        required_status_checks: { strict: true, contexts: ["build","test"] } }
+    };
+    res.json(spec);
+  } catch (e) { next(e); }
+});
+
+/**
+ * POST /reconcile/callback
+ * Headers: Authorization: Bearer <CB_BEARER>
+ * Body: { org, repo, runId, status, error? }
+ * Use this to update Mongo: lastAppliedHash/status/timestamps/summary.
+ */
+app.post("/reconcile/callback", (req, res, next) => {
+  try {
+    assertBearer(req, process.env.CB_BEARER);
+    const { org, repo, runId, status, error } = req.body || {};
+    if (!org || !repo || !runId || !status) throw Object.assign(new Error("invalid payload"), { status: 400 });
+
+    // TODO: update Mongo for (org,repo):
+    // - lastRunId = runId
+    // - status = status ('success'|'error')
+    // - lastAppliedAt = now
+    // - if error: store error; else store summary counters
+    console.log("Callback:", { org, repo, runId, status, error });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+app.use((err, req, res, _next) => {
+  res.status(err.status || 500).json({ error: String(err.message || err) });
+});
+
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Stub API listening on http://localhost:${port}`));
