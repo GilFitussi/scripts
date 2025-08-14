@@ -1,0 +1,26 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Dummy Actor" as DummyActor
+rectangle "Dummy Component 1" as DummyComponent1
+rectangle "Dummy Component 2" as DummyComponent2
+
+DummyActor -> DummyComponent1 : Dummy Action 1
+DummyActor -> DummyActor : [Dummy Condition]
+
+alt Dummy Condition Met
+    DummyActor -> DummyComponent2 : Dummy Action 2
+    DummyComponent2 -> DummyActor : Dummy Action 3
+    DummyComponent2 -> DummyActor : Dummy Response 1
+
+    alt Dummy Subcondition
+        DummyActor -> DummyActor : Dummy Action 4
+    else
+        DummyActor -> DummyActor : Dummy Action 5
+        DummyActor -> DummyComponent2 : Dummy Action 6
+        DummyComponent2 -> DummyActor : Dummy Response 2
+    end
+end
+
+@enduml
