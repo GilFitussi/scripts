@@ -1,0 +1,284 @@
+const Koa = require('koa');
+const bodyParser = require('koa-bodyparser');
+const { MongoClient } = require('mongodb');
+
+class TektonEventProcessor {
+  constructor() {
+    this.dbClient = null;
+    this.db = null;
+    this.eventQueue = [];
+    this.isProcessing = false;
+    
+    // Configuration
+    this.BATCH_SIZE = 100;           // Process 100 events at once
+    this.FLUSH_INTERVAL = 2000;      // Flush every 2 seconds
+    this.MAX_QUEUE_SIZE = 1000;      // Prevent memory overflow
+  }
+
+  async init() {
+    // Single connection with optimized pool for high throughput
+    this.dbClient = new MongoClient(process.env.MONGO_URI || 'mongodb://localhost:27017', {
+      // Pool settings for high volume
+      maxPoolSize: 25,              // 25 concurrent connections
+      minPoolSize: 5,               // Keep 5 always ready
+      maxIdleTimeMS: 60000,         // Keep connections alive for 1 minute
+      
+      // Performance optimizations
+      maxConnecting: 5,             // Max 5 connecting at once
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+      connectTimeoutMS: 10000,
+      
+      // Write performance (less durability, more speed)
+      retryWrites: true,
+      writeConcern: { w: 1, j: false }
+    });
+
+    await this.dbClient.connect();
+    this.db = this.dbClient.db('tekton_events');
+    
+    // Create indexes for better performance
+    await this.createIndexes();
+    
+    // Start batch processor
+    this.startBatchProcessor();
+    
+    console.log('✅ Tekton Event Processor initialized with high-throughput pool');
+  }
+
+  async createIndexes() {
+    const collection = this.db.collection('pipeline_runs');
+    
+    // Indexes for common queries
+    await collection.createIndex({ 'pipelineName': 1, 'timestamp': -1 });
+    await collection.createIndex({ 'status': 1, 'timestamp': -1 });
+    await collection.createIndex({ 'timestamp': -1 });
+    
+    console.log('📊 Database indexes created');
+  }
+
+  // Add event to processing queue (non-blocking)
+  addEvent(eventData) {
+    // Prevent memory overflow
+    if (this.eventQueue.length >= this.MAX_QUEUE_SIZE) {
+      console.warn('⚠️  Event queue full, dropping oldest events');
+      this.eventQueue.splice(0, 100); // Remove oldest 100 events
+    }
+
+    const processedEvent = {
+      ...eventData,
+      timestamp: new Date(),
+      received_at: new Date(),
+      processed: false
+    };
+
+    this.eventQueue.push(processedEvent);
+
+    // If queue is getting big, process immediately
+    if (this.eventQueue.length >= this.BATCH_SIZE) {
+      setImmediate(() => this.processBatch());
+    }
+  }
+
+  // Process events in batches (much more efficient)
+  async processBatch() {
+    if (this.isProcessing || this.eventQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
+
+    try {
+      // Take a batch from queue
+      const batchSize = Math.min(this.BATCH_SIZE, this.eventQueue.length);
+      const batch = this.eventQueue.splice(0, batchSize);
+
+      if (batch.length === 0) {
+        this.isProcessing = false;
+        return;
+      }
+
+      // Process batch with single database call
+      const result = await this.db.collection('pipeline_runs').insertMany(
+        batch,
+        { 
+          ordered: false,    // Don't stop on duplicate errors
+          writeConcern: { w: 1, j: false } // Fast writes
+        }
+      );
+
+      console.log(`✨ Processed batch: ${result.insertedCount}/${batch.length} events`);
+
+      // If there were errors, log them but continue
+      if (result.insertedCount < batch.length) {
+        console.warn(`⚠️  ${batch.length - result.insertedCount} events failed (likely duplicates)`);
+      }
+
+    } catch (error) {
+      console.error('❌ Batch processing error:', error.message);
+      
+      // For debugging - you might want to implement retry logic here
+      if (error.code === 11000) {
+        console.log('Duplicate key errors detected - continuing...');
+      }
+    } finally {
+      this.isProcessing = false;
+      
+      // Process next batch if queue has more events
+      if (this.eventQueue.length > 0) {
+        setImmediate(() => this.processBatch());
+      }
+    }
+  }
+
+  // Start automatic batch processing
+  startBatchProcessor() {
+    setInterval(() => {
+      if (this.eventQueue.length > 0 && !this.isProcessing) {
+        this.processBatch();
+      }
+    }, this.FLUSH_INTERVAL);
+
+    console.log(`🔄 Batch processor started (every ${this.FLUSH_INTERVAL}ms)`);
+  }
+
+  // For immediate processing (if needed)
+  async processEventImmediately(eventData) {
+    try {
+      const result = await this.db.collection('pipeline_runs').insertOne({
+        ...eventData,
+        timestamp: new Date(),
+        processed: true
+      });
+
+      console.log(`⚡ Immediately processed event: ${eventData.pipelineName}`);
+      return result;
+    } catch (error) {
+      console.error('❌ Immediate processing error:', error);
+      throw error;
+    }
+  }
+
+  // Graceful shutdown
+  async close() {
+    console.log('🔄 Shutting down processor...');
+    
+    // Process remaining events
+    while (this.eventQueue.length > 0 && !this.isProcessing) {
+      await this.processBatch();
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    if (this.dbClient) {
+      await this.dbClient.close();
+      console.log('✅ Database connection closed');
+    }
+  }
+
+  // Health check
+  getStatus() {
+    return {
+      connected: !!this.dbClient,
+      queueSize: this.eventQueue.length,
+      isProcessing: this.isProcessing,
+      timestamp: new Date()
+    };
+  }
+}
+
+// Koa server setup
+const app = new Koa();
+const processor = new TektonEventProcessor();
+
+app.use(bodyParser());
+
+// Health check endpoint
+app.use(async (ctx, next) => {
+  if (ctx.path === '/health') {
+    ctx.body = processor.getStatus();
+    return;
+  }
+  await next();
+});
+
+// Main event processing endpoint
+app.use(async (ctx, next) => {
+  if (ctx.path === '/tekton-event' && ctx.method === 'POST') {
+    try {
+      const eventData = ctx.request.body;
+      
+      // Add to queue (non-blocking - returns immediately)
+      processor.addEvent(eventData);
+      
+      ctx.status = 202; // Accepted
+      ctx.body = { 
+        message: 'Event queued for processing',
+        queueSize: processor.eventQueue.length
+      };
+      
+    } catch (error) {
+      ctx.status = 500;
+      ctx.body = { error: error.message };
+    }
+    return;
+  }
+  await next();
+});
+
+// For urgent events that need immediate processing
+app.use(async (ctx, next) => {
+  if (ctx.path === '/tekton-event/urgent' && ctx.method === 'POST') {
+    try {
+      const eventData = ctx.request.body;
+      
+      // Process immediately (blocking)
+      await processor.processEventImmediately(eventData);
+      
+      ctx.status = 201;
+      ctx.body = { message: 'Event processed immediately' };
+      
+    } catch (error) {
+      ctx.status = 500;
+      ctx.body = { error: error.message };
+    }
+    return;
+  }
+  await next();
+});
+
+// Startup and graceful shutdown
+async function start() {
+  try {
+    await processor.init();
+    
+    const port = process.env.PORT || 3000;
+    app.listen(port, () => {
+      console.log(`🚀 Tekton Event Processor running on port ${port}`);
+      console.log(`📊 Optimized for high-volume events with batching`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to start:', error);
+    process.exit(1);
+  }
+}
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('📴 Received SIGTERM, shutting down gracefully...');
+  await processor.close();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('📴 Received SIGINT, shutting down gracefully...');
+  await processor.close();
+  process.exit(0);
+});
+
+// Handle uncaught errors
+process.on('unhandledRejection', (err) => {
+  console.error('💥 Unhandled rejection:', err);
+});
+
+start();
