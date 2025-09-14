@@ -1,0 +1,31 @@
+# 0) איפוס הגדרות שמבלבלות
+git config --global --unset credential.helper 2>/dev/null || true
+git config --system --unset credential.helper 2>/dev/null || true
+git config --local  --unset credential.helper 2>/dev/null || true
+
+git config --global --unset http.proxy  2>/dev/null || true
+git config --global --unset https.proxy 2>/dev/null || true
+unset HTTP_PROXY HTTPS_PROXY ALL_PROXY
+
+# 1) ודא שה-helper קיים במק
+which git-credential-osxkeychain || true
+# אם אין פלט, התקן Git מה-Homebrew:
+# brew install git
+
+# 2) הפעל osxkeychain רק לריפו הזה (לא גלובלי)
+git config credential.helper osxkeychain
+
+# 3) הגדר את הפרוקסי ללא יוזר/סיסמה (עדכן host:port שלך)
+git config http.proxy  "http://proxy.example.com:8080"
+git config https.proxy "http://proxy.example.com:8080"
+
+# 4) בדיקה שההגדרות באמת מקומיות
+git config --show-origin --get-all credential.helper
+git config --show-origin --get http.proxy
+git config --show-origin --get https.proxy
+
+# 5) טריגר לשמירת הטוקן (יזום prompt של Git)
+git ls-remote https://github.com/github/gitignore.git
+# כשהוא מבקש:
+# Username: שם המשתמש שלך בגיטהאב (או כל דבר)
+# Password: הדבק PAT (הטוקן) שלך מגיטהאב
