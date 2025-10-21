@@ -6,32 +6,59 @@ Inputs:
 - My declared yearly goals and mid-year review (implicitly included in your context)
 
 Tasks:
-1. For every goal, explicitly connect it to at least one concrete achievement from completed work this year.
-2. Use the context of epics and linked features to provide **specific examples, evidence, or proof** of what was accomplished in relation to each goal.
-3. WHAT section:
-   - Describe the actual achievements in a clear, outcome-driven, goal-aligned way.
-   - Include measurable results or concrete outcomes wherever possible.
-   - **When there are multiple achievements, list them as bullet points for clarity.**
-4. HOW section:
-   - Describe how these results were accomplished — emphasizing behaviors, ownership, collaboration, design decisions, leadership, problem-solving, and impact on team and organization.
-   - Use short, readable paragraphs; if there are multiple behaviors or approaches, separate them into bullets for clarity.
-5. Avoid generic AI/robotic language — write as a human professional engineer self-reporting thoughtfully and credibly.
-6. Do not mention Jira IDs, ticket numbers, or internal codes.
-7. Structure output exactly as follows:
 
-WHAT — End of Year Outcomes
-- [Bullet 1: achievement + example/proof]
-- [Bullet 2: achievement + example/proof]
-- [...]
+1. HOW — Execution & Behaviors:
+   - Write a **general, top-level description** of how results were achieved across all goals.
+   - Emphasize leadership, ownership, collaboration, problem-solving, decision-making, and impact.
+   - Keep it in short, readable paragraphs (2–4), optionally using bullets for clarity.
+
+2. WHAT — Achievements by Goal Category:
+   - Organize strictly by the following categories:
+     - Risk & Control
+     - Financial Performance
+     - Client & Franchise Outcomes
+   - **For each category:**
+     - Include **only the goal assigned to that category**.
+     - List **concrete achievements** related exclusively to that goal.
+     - Use epics and linked features to provide **examples or proof**.
+     - When there are multiple achievements, list them as **bullet points**.
+   - Avoid generic statements — tie each achievement to the specific goal in that category.
+
+3. Forward Looking Note:
+   - 1–2 concise sentences about continued contribution or next steps.
+
+Additional Rules:
+- Do not mention Jira IDs, ticket numbers, or internal codes.
+- Avoid robotic AI-sounding language — write as a thoughtful, professional self-report.
+- Output should be concise, readable, and structured so a manager can easily scan it.
+
+Required Structure:
 
 HOW — Execution & Behaviors
-- [Paragraph 1: description of behaviors/approach]
-- [Paragraph 2: description of behaviors/approach]
-- [...]
+[2–4 paragraphs or bullets describing leadership, ownership, collaboration, and approach across all goals]
+
+WHAT — Achievements by Goal Category
+
+Risk & Control
+- Goal: [insert specific Risk & Control goal here]
+  - Achievement bullet 1
+  - Achievement bullet 2
+  - ...
+
+Financial Performance
+- Goal: [insert specific Financial Performance goal here]
+  - Achievement bullet 1
+  - Achievement bullet 2
+  - ...
+
+Client & Franchise Outcomes
+- Goal: [insert specific Client & Franchise Outcomes goal here]
+  - Achievement bullet 1
+  - Achievement bullet 2
+  - ...
 
 Forward Looking Note
-[1–2 concise sentences about continued contribution or next steps]
+[1–2 sentences]
 
-Output should be concise, readable, professional, and easy to scan.
 Do not generate output until all Jira items and their contextual links have been considered.
 When ready, respond only with: READY TO PROCESS
