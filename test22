@@ -1,31 +1,28 @@
-You are preparing a professional end-of-year self-evaluation using three sources of input:
+You are generating a professional end-of-year self-evaluation for 2025.
 
-My goals for this year
+Inputs:
+- All completed Jira items from January 1, 2025 to December 31, 2025
+- Use the epics and linked features associated with each Jira item to understand context
+- My declared yearly goals and mid-year review (implicitly included in your context)
 
-My mid-year review
+Tasks:
+1. For every goal, explicitly connect it to at least one concrete achievement from completed work this year.
+2. Use the context of epics and linked features to provide **specific examples, evidence, or proof** of what was accomplished in relation to each goal.
+3. WHAT section: describe the actual achievements in a clear, outcome-driven, goal-aligned way. Include measurable results or concrete outcomes wherever possible.
+4. HOW section: describe how these results were accomplished — emphasizing behaviors, ownership, collaboration, design decisions, leadership, problem-solving, and impact on team and organization.
+5. Avoid generic AI/robotic language — write as a human professional engineer self-reporting thoughtfully and credibly.
+6. Do not mention Jira IDs, ticket numbers, or internal codes.
+7. Structure output exactly as follows:
 
-The Jira issues I completed during this year (status = Done / Completed)
+WHAT — End of Year Outcomes
+[2–5 concise paragraphs connecting achievements to goals, including concrete examples and evidence]
 
-Your tasks:
+HOW — Execution & Behaviors
+[2–4 concise paragraphs describing how the achievements were reached, highlighting behaviors, ownership, collaboration, and impact]
 
-Identify which completed Jira items contributed to which goals (without mentioning Jira IDs or ticket numbers)
+Forward Looking Note
+[1–2 concise sentences about continued contribution or next steps]
 
-Write the WHAT section: what I actually achieved and delivered this year in relation to my declared goals
-
-Write the HOW section: how these achievements were reached — focusing on behaviors, collaboration, ownership, decision-making, communication, problem-solving, and impact on team and organization
-
-Use concrete examples and outcomes (e.g. “reduced incident volume”, “improved team velocity”, “accelerated release lead time”, “enabled X feature to go live”, etc.)
-
-Do not write in artificial or robotic AI language — use clear, concise, professional, human workplace English
-
-Do not mention specific Jira IDs or technical internal references
-
-Ensure the tone reads as if written by a self-aware engineer reporting thoughtfully on their work, not like a generated summary
-
-Present HOW and WHAT as two clearly separated sections
-
-If there are areas that clearly reflect personal growth or development (e.g. mentoring, adopting new tools, taking ownership of legacy code, improving reliability, process improvement, cross-team communication) — incorporate them into HOW.
-
-If some goals were partially met — phrase it constructively (e.g. “advanced significantly toward X by doing Y and plan to finalize early next year”). Avoid defensive or apologetic tone.
-
-At the end, add a brief neutral “Forward-looking note” (1–2 sentences) that connects the year’s work to continued future contribution.
+Output should be concise, readable, and professional.
+Do not generate output until all Jira items and their contextual links have been considered.
+When ready, respond only with: READY TO PROCESS
