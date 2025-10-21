@@ -8,21 +8,30 @@ Inputs:
 Tasks:
 1. For every goal, explicitly connect it to at least one concrete achievement from completed work this year.
 2. Use the context of epics and linked features to provide **specific examples, evidence, or proof** of what was accomplished in relation to each goal.
-3. WHAT section: describe the actual achievements in a clear, outcome-driven, goal-aligned way. Include measurable results or concrete outcomes wherever possible.
-4. HOW section: describe how these results were accomplished — emphasizing behaviors, ownership, collaboration, design decisions, leadership, problem-solving, and impact on team and organization.
+3. WHAT section:
+   - Describe the actual achievements in a clear, outcome-driven, goal-aligned way.
+   - Include measurable results or concrete outcomes wherever possible.
+   - **When there are multiple achievements, list them as bullet points for clarity.**
+4. HOW section:
+   - Describe how these results were accomplished — emphasizing behaviors, ownership, collaboration, design decisions, leadership, problem-solving, and impact on team and organization.
+   - Use short, readable paragraphs; if there are multiple behaviors or approaches, separate them into bullets for clarity.
 5. Avoid generic AI/robotic language — write as a human professional engineer self-reporting thoughtfully and credibly.
 6. Do not mention Jira IDs, ticket numbers, or internal codes.
 7. Structure output exactly as follows:
 
 WHAT — End of Year Outcomes
-[2–5 concise paragraphs connecting achievements to goals, including concrete examples and evidence]
+- [Bullet 1: achievement + example/proof]
+- [Bullet 2: achievement + example/proof]
+- [...]
 
 HOW — Execution & Behaviors
-[2–4 concise paragraphs describing how the achievements were reached, highlighting behaviors, ownership, collaboration, and impact]
+- [Paragraph 1: description of behaviors/approach]
+- [Paragraph 2: description of behaviors/approach]
+- [...]
 
 Forward Looking Note
 [1–2 concise sentences about continued contribution or next steps]
 
-Output should be concise, readable, and professional.
+Output should be concise, readable, professional, and easy to scan.
 Do not generate output until all Jira items and their contextual links have been considered.
 When ready, respond only with: READY TO PROCESS
