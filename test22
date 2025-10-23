@@ -1,73 +1,51 @@
 You are generating a professional end-of-year self-evaluation for 2025.
 
-Data Sources:
-- All completed Jira items between Jan 1, 2025 and Dec 31, 2025
-- Use epics / linked features of each Jira item for context and intent
-- Yearly goals and mid-year review are implicitly part of your context
+You will be given as input:
+- A list of ALL completed Jira items from Jan 1 – Dec 31, 2025 (I will provide them explicitly)
+- For each Jira item, the linked epic/feature context (also explicitly provided)
+- My declared yearly goals and my mid-year review (also provided)
 
 CRITICAL RULE — NO SKIPPING:
-You must process **100% of all completed Jira items without exception**.
-No item may be ignored. If a Jira item is too small to stand alone,
-still absorb it into evidence, reinforcement, or pattern support within a goal.
-Use epics context to extract purpose and impact — never write in a vacuum.
-Do not mention Jira IDs or codes.
+You must use **100% of the provided Jira items and their epic contexts**.
+Nothing may be ignored. Even “small” items must still contribute as evidence,
+reinforcement, or context inside one of the goal categories.
+Do not mention Jira IDs or ticket numbers.
 
 STRUCTURE TO FOLLOW:
 
----
-
-HOW — Execution & Behaviors (global, not per goal)
+HOW — Execution & Behaviors (global / not per goal)
 Describe how I executed across all goals (leadership, ownership, design rigor, risk thinking, collaboration, initiative, delivery discipline).
 Use 2–4 short readable paragraphs or bullets.
 
----
-
 WHAT — Achievements by Goal Category
+Organize achievements strictly under these three categories:
 
-For each of the 3 categories below:
-  - Consider only the goal(s) assigned to that category.
-  - Use Jira+epics evidence from 2025 work that relates to that goal.
-  - For each achievement, write it in a 4-step micro-structure:
+1) Risk & Control
+2) Financial Performance
+3) Client & Franchise Outcomes
 
-      (1) Context / Goal — what I was expected to achieve  
-      (2) Action — what I actually did  
-      (3) Impact — the outcome, improvement, measurable effect  
-      (4) Growth — what I learned or how I will evolve it further
+For each category:
+- Use only the goal(s) assigned to that category
+- Use the relevant Jira items (with their epic context) as evidence
+- For every achievement, write it in the following 4-step micro-structure:
 
-  - If there are multiple achievements, list them as separate bullets —
-    but each bullet internally follows the (1-2-3-4) narrative.
+   (1) Context / Goal — what I was expected to achieve  
+   (2) Action — what I actually did  
+   (3) Impact — measurable outcome / improvement  
+   (4) Growth — what I learned or how I intend to evolve  
 
-CATEGORIES:
-
-Risk & Control
-- Goal: [insert goal from this category]
-  - Bullet #1 (1-2-3-4)
-  - Bullet #2 …
-
-Financial Performance
-- Goal: [insert goal from this category]
-  - Bullet(s) (1-2-3-4)
-
-Client & Franchise Outcomes
-- Goal: [insert goal from this category]
-  - Bullet(s) (1-2-3-4)
-
----
+- If there are multiple achievements in a category, list them as separate bullets,
+  but each bullet must internally follow the (1-2-3-4) narrative.
 
 FORWARD LOOKING NOTE
-A short 1–2 sentence statement about how I intend to continue contributing or evolving based on this year.
+1–2 concise sentences about intended continued contribution or evolution next year.
 
----
-
-STYLE & TONE REQUIREMENTS
-- Must read like a thoughtful human evaluation, not like AI
-- Must remain concise, evidence-based, and credible
-- Must logically connect goals ↔ actions ↔ outcomes using real work
+STYLE & TONE
+- Must read like a thoughtful human self-evaluation, not AI-generated
+- Concise, evidence-based, goal-aligned
+- No Jira IDs or codes
 - No generic filler language
-- No Jira numbers
 
----
-
-Do not produce the evaluation yet.
-When ready to begin processing Jira and goals, reply only with:
-READY TO PROCESS
+Do not generate the evaluation yet.
+When you finish reading and are ready to receive the inputs, respond only with:
+READY TO RECEIVE INPUTS
