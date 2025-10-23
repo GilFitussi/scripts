@@ -1,51 +1,46 @@
 You are generating a professional end-of-year self-evaluation for 2025.
 
-You will be given as input:
-- A list of ALL completed Jira items from Jan 1 – Dec 31, 2025 (I will provide them explicitly)
-- For each Jira item, the linked epic/feature context (also explicitly provided)
-- My declared yearly goals and my mid-year review (also provided)
+You will receive as input:
+- A full list of ALL completed Jira items (Jan–Dec 2025)
+- For each Jira item, the linked Epic/Feature context
+- My yearly goals + mid-year review
 
-CRITICAL RULE — NO SKIPPING:
-You must use **100% of the provided Jira items and their epic contexts**.
-Nothing may be ignored. Even “small” items must still contribute as evidence,
-reinforcement, or context inside one of the goal categories.
-Do not mention Jira IDs or ticket numbers.
+CRITICAL NON-NEGOTIABLE RULE:
+Every statement in the “WHAT” section MUST be explicitly grounded in the provided Jira work
+and/or its epic context. You are NOT allowed to write generic achievements or
+high-level claims that are not traceable to the supplied Jira evidence.
 
-STRUCTURE TO FOLLOW:
+If you cannot support a sentence with actual Jira-based evidence — do not write it.
 
-HOW — Execution & Behaviors (global / not per goal)
-Describe how I executed across all goals (leadership, ownership, design rigor, risk thinking, collaboration, initiative, delivery discipline).
-Use 2–4 short readable paragraphs or bullets.
+No Jira IDs or codes may appear in the text.
+
+STRUCTURE:
+
+HOW — Execution & Behaviors (global)
+Describe how I executed across the year — BUT only using patterns derived from the Jira work
+(e.g. multiple Jira items showing ownership/ leadership / design rigor / risk thinking).
+Do not write any generic leadership text without grounding it in recurring patterns
+observed across the provided Jira work.
 
 WHAT — Achievements by Goal Category
-Organize achievements strictly under these three categories:
+Use ONLY evidence from the provided Jira items + epics.
+Group strictly under:
 
 1) Risk & Control
 2) Financial Performance
 3) Client & Franchise Outcomes
 
-For each category:
-- Use only the goal(s) assigned to that category
-- Use the relevant Jira items (with their epic context) as evidence
-- For every achievement, write it in the following 4-step micro-structure:
+For each achievement bullet, follow this micro-structure:
+   (1) Context/Goal — what the goal required to improve or deliver
+   (2) Action — what I actually did (based on a Jira item or cluster of items)
+   (3) Impact — measurable/observable effect
+   (4) Growth — what I learned / will evolve further
 
-   (1) Context / Goal — what I was expected to achieve  
-   (2) Action — what I actually did  
-   (3) Impact — measurable outcome / improvement  
-   (4) Growth — what I learned or how I intend to evolve  
-
-- If there are multiple achievements in a category, list them as separate bullets,
-  but each bullet must internally follow the (1-2-3-4) narrative.
+No generic claims — only Jira/epic-anchored statements.
 
 FORWARD LOOKING NOTE
-1–2 concise sentences about intended continued contribution or evolution next year.
+1–2 short sentences linked to insights derived from the executed Jira work.
 
-STYLE & TONE
-- Must read like a thoughtful human self-evaluation, not AI-generated
-- Concise, evidence-based, goal-aligned
-- No Jira IDs or codes
-- No generic filler language
-
-Do not generate the evaluation yet.
-When you finish reading and are ready to receive the inputs, respond only with:
-READY TO RECEIVE INPUTS
+STYLE:
+- Must read like a human self-evaluation
+- Evidence-based
