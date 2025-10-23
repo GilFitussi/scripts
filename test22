@@ -1,64 +1,73 @@
 You are generating a professional end-of-year self-evaluation for 2025.
 
-Inputs:
-- All completed Jira items from January 1, 2025 to December 31, 2025
-- Use the epics and linked features associated with each Jira item to understand context
-- My declared yearly goals and mid-year review (implicitly included in your context)
+Data Sources:
+- All completed Jira items between Jan 1, 2025 and Dec 31, 2025
+- Use epics / linked features of each Jira item for context and intent
+- Yearly goals and mid-year review are implicitly part of your context
 
-Tasks:
+CRITICAL RULE — NO SKIPPING:
+You must process **100% of all completed Jira items without exception**.
+No item may be ignored. If a Jira item is too small to stand alone,
+still absorb it into evidence, reinforcement, or pattern support within a goal.
+Use epics context to extract purpose and impact — never write in a vacuum.
+Do not mention Jira IDs or codes.
 
-1. HOW — Execution & Behaviors:
-   - Write a **general, top-level description** of how results were achieved across all goals.
-   - Emphasize leadership, ownership, collaboration, problem-solving, decision-making, and impact.
-   - Keep it in short, readable paragraphs (2–4), optionally using bullets for clarity.
+STRUCTURE TO FOLLOW:
 
-2. WHAT — Achievements by Goal Category:
-   - Organize strictly by the following categories:
-     - Risk & Control
-     - Financial Performance
-     - Client & Franchise Outcomes
-   - **For each category:**
-     - Include **only the goal assigned to that category**.
-     - List **concrete achievements** related exclusively to that goal.
-     - Use epics and linked features to provide **examples or proof**.
-     - When there are multiple achievements, list them as **bullet points**.
-   - Avoid generic statements — tie each achievement to the specific goal in that category.
+---
 
-3. Forward Looking Note:
-   - 1–2 concise sentences about continued contribution or next steps.
+HOW — Execution & Behaviors (global, not per goal)
+Describe how I executed across all goals (leadership, ownership, design rigor, risk thinking, collaboration, initiative, delivery discipline).
+Use 2–4 short readable paragraphs or bullets.
 
-Additional Rules:
-- Do not mention Jira IDs, ticket numbers, or internal codes.
-- Avoid robotic AI-sounding language — write as a thoughtful, professional self-report.
-- Output should be concise, readable, and structured so a manager can easily scan it.
-
-Required Structure:
-
-HOW — Execution & Behaviors
-[2–4 paragraphs or bullets describing leadership, ownership, collaboration, and approach across all goals]
+---
 
 WHAT — Achievements by Goal Category
 
+For each of the 3 categories below:
+  - Consider only the goal(s) assigned to that category.
+  - Use Jira+epics evidence from 2025 work that relates to that goal.
+  - For each achievement, write it in a 4-step micro-structure:
+
+      (1) Context / Goal — what I was expected to achieve  
+      (2) Action — what I actually did  
+      (3) Impact — the outcome, improvement, measurable effect  
+      (4) Growth — what I learned or how I will evolve it further
+
+  - If there are multiple achievements, list them as separate bullets —
+    but each bullet internally follows the (1-2-3-4) narrative.
+
+CATEGORIES:
+
 Risk & Control
-- Goal: [insert specific Risk & Control goal here]
-  - Achievement bullet 1
-  - Achievement bullet 2
-  - ...
+- Goal: [insert goal from this category]
+  - Bullet #1 (1-2-3-4)
+  - Bullet #2 …
 
 Financial Performance
-- Goal: [insert specific Financial Performance goal here]
-  - Achievement bullet 1
-  - Achievement bullet 2
-  - ...
+- Goal: [insert goal from this category]
+  - Bullet(s) (1-2-3-4)
 
 Client & Franchise Outcomes
-- Goal: [insert specific Client & Franchise Outcomes goal here]
-  - Achievement bullet 1
-  - Achievement bullet 2
-  - ...
+- Goal: [insert goal from this category]
+  - Bullet(s) (1-2-3-4)
 
-Forward Looking Note
-[1–2 sentences]
+---
 
-Do not generate output until all Jira items and their contextual links have been considered.
-When ready, respond only with: READY TO PROCESS
+FORWARD LOOKING NOTE
+A short 1–2 sentence statement about how I intend to continue contributing or evolving based on this year.
+
+---
+
+STYLE & TONE REQUIREMENTS
+- Must read like a thoughtful human evaluation, not like AI
+- Must remain concise, evidence-based, and credible
+- Must logically connect goals ↔ actions ↔ outcomes using real work
+- No generic filler language
+- No Jira numbers
+
+---
+
+Do not produce the evaluation yet.
+When ready to begin processing Jira and goals, reply only with:
+READY TO PROCESS
