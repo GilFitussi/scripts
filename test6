@@ -1,86 +1,137 @@
+הנה גרסה משופרת עם קונטקסט מורחב, כולל הדגשה שאתה תספק UI screenshot + schema, בלי להמציא מה ה-UI צריך. כל מה שנכתב על ה-UI תוקן בהתאם.
 
-You are an expert in Tekton Pipelines, event-driven architecture, and high-performance data ingestion.
-I need your help designing the most optimal, minimal-overhead strategy for consuming Tekton events and storing only the necessary data in MongoDB.
+הפרומפט מוכן להעתקה:
 
 
 ---
 
-Context
+✅ Expanded & Corrected Prompt
 
-I receive Tekton events for both TaskRuns and PipelineRuns.
-I plan to store them in two MongoDB collections:
+You are an expert in Tekton Pipelines, event-driven architecture, MongoDB performance optimization, and large-scale CI/CD telemetry systems.
 
-taskRuns
+
+---
+
+Context (Expanded)
+
+I am building a service that listens to Tekton events and stores only the essential information needed for a UI dashboard.
+The dashboard will display pipeline and task progress, statuses, timestamps, and possibly additional metadata.
+
+Important:
+I will provide:
+
+An image of the UI (a screenshot of the exact dashboard)
+
+A schema describing what fields the UI needs
+
+
+You should not assume what fields the UI requires.
+Your job is to help me plan the ingestion system before I provide the UI data, so the design should be generic, flexible, and focused on minimizing unnecessary work.
+
+I will store Tekton data in two MongoDB collections:
 
 pipelineRuns
 
-
-The database is used only by a UI that shows the build progress and status over time.
-I will provide:
-
-The exact UI fields needed
-
-A screenshot of the UI
+taskRuns
 
 
-Your job is to help me design a strategy that results in the fewest possible database writes and the minimum amount of event parsing while still keeping the UI accurate and up-to-date.
+The system must be high-performance, with:
+
+The minimum possible number of database writes
+
+The minimum possible event parsing
+
+Avoiding redundant updates
+
+Ensuring the UI remains accurate and live
+
+
+This means we need to decide:
+
+Which Tekton events are useful
+
+Which Tekton events can be ignored
+
+What fields can and should be extracted from each event type
+
+How to design a schema that supports the UI once I share it
+
+
+The goal is to create a data ingestion strategy that is both correct and as cheap as possible computationally.
 
 
 ---
 
 Your Task
 
-Design a complete ingestion and storage strategy that covers:
+Design a complete ingestion, filtering, and storage strategy, including:
 
 1. Which Tekton events must be processed and
 which events can be safely ignored to minimize load.
 
 
-2. Where in the events the relevant fields can be extracted from
-(e.g., metadata, status, conditions, startTime, completionTime, results, etc.).
+2. Where in the Tekton event structure the relevant fields can be found, including:
 
+metadata
 
-3. Which fields should be stored in MongoDB based only on what the UI needs
-(you must propose a minimal set, and later I will confirm or refine it).
+status fields
 
+conditions
 
-4. How to minimize database writes, including:
+timestamps
 
-which event types trigger a write
+results
 
-how to avoid unnecessary updates
-
-how to make writes idempotent
-
-when to store partial vs. complete objects
+annotations and labels
 
 
 
-5. What the optimal MongoDB schema should look like, for both collections, optimized for:
+3. A minimal extraction model
+(later I will refine it based on the UI needs and provide a screenshot + schema).
+
+
+4. MongoDB schema suggestions
+— not final, but a recommended starting point — optimized for:
 
 minimal writes
 
-minimal document updates
+minimal per-event updates
 
-fast reads for the UI
+fast read performance
 
-efficient correlation between PipelineRuns and TaskRuns
-
-
-
-6. How to correlate TaskRuns to their parent PipelineRun using event fields.
+efficient linking between PipelineRuns and TaskRuns
 
 
-7. A strategy for handling missing or partial events while still keeping UI progress accurate.
+
+5. A DB-write minimization strategy, including:
+
+which events should trigger updates
+
+which fields require updates and when
+
+how to avoid frequent writes during long-running tasks
+
+idempotency design
+
+“write-once, update-only-on-state-change” logic
 
 
-8. Examples of the final documents for a TaskRun and PipelineRun, using the minimal required fields.
+
+6. How to correlate TaskRuns to their parent PipelineRun using fields in Tekton events.
 
 
-9. A processing flow (text diagram) that shows:
+7. How to handle missing or partial Tekton events while still providing consistent UI data.
 
-event received → validate → extract relevant data → decide whether to update DB → write or skip.
 
+8. Examples of the expected stored documents for both PipelineRun and TaskRun using the minimal required fields (placeholders are fine until I provide the UI schema).
+
+
+9. A recommended processing flow, including:
+
+event received → filter → extract minimal fields → detect if update is needed → write or skip
+
+
+10. Any pitfalls, edge cases, or Tekton behavior patterns that affect how runs start, update, or complete.
 
 
 
@@ -89,13 +140,20 @@ event received → validate → extract relevant data → decide whether to upda
 
 Output Requirements
 
-Please structure the answer clearly with:
+Please structure the output with:
 
-Bullet points
+Clear sections
 
-Code-like examples
+Bullet lists
 
-A concise explanation for each decision
+Concise technical explanations
 
-A strong emphasis on performance, minimal event reading, and minimal DB writes
+Code-like examples where relevant
 
+Strong focus on performance, minimal DB writes, and minimal event consumption
+
+
+
+---
+
+אם תרצה, אני יכול גם לייצר גרסה שמותאמת במיוחד לשירות Node.js עם Express או Fastify, או להתממשקות עם NATS/Kafka/Webhooks.
