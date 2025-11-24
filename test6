@@ -1,0 +1,101 @@
+
+You are an expert in Tekton Pipelines, event-driven architecture, and high-performance data ingestion.
+I need your help designing the most optimal, minimal-overhead strategy for consuming Tekton events and storing only the necessary data in MongoDB.
+
+
+---
+
+Context
+
+I receive Tekton events for both TaskRuns and PipelineRuns.
+I plan to store them in two MongoDB collections:
+
+taskRuns
+
+pipelineRuns
+
+
+The database is used only by a UI that shows the build progress and status over time.
+I will provide:
+
+The exact UI fields needed
+
+A screenshot of the UI
+
+
+Your job is to help me design a strategy that results in the fewest possible database writes and the minimum amount of event parsing while still keeping the UI accurate and up-to-date.
+
+
+---
+
+Your Task
+
+Design a complete ingestion and storage strategy that covers:
+
+1. Which Tekton events must be processed and
+which events can be safely ignored to minimize load.
+
+
+2. Where in the events the relevant fields can be extracted from
+(e.g., metadata, status, conditions, startTime, completionTime, results, etc.).
+
+
+3. Which fields should be stored in MongoDB based only on what the UI needs
+(you must propose a minimal set, and later I will confirm or refine it).
+
+
+4. How to minimize database writes, including:
+
+which event types trigger a write
+
+how to avoid unnecessary updates
+
+how to make writes idempotent
+
+when to store partial vs. complete objects
+
+
+
+5. What the optimal MongoDB schema should look like, for both collections, optimized for:
+
+minimal writes
+
+minimal document updates
+
+fast reads for the UI
+
+efficient correlation between PipelineRuns and TaskRuns
+
+
+
+6. How to correlate TaskRuns to their parent PipelineRun using event fields.
+
+
+7. A strategy for handling missing or partial events while still keeping UI progress accurate.
+
+
+8. Examples of the final documents for a TaskRun and PipelineRun, using the minimal required fields.
+
+
+9. A processing flow (text diagram) that shows:
+
+event received → validate → extract relevant data → decide whether to update DB → write or skip.
+
+
+
+
+
+---
+
+Output Requirements
+
+Please structure the answer clearly with:
+
+Bullet points
+
+Code-like examples
+
+A concise explanation for each decision
+
+A strong emphasis on performance, minimal event reading, and minimal DB writes
+
