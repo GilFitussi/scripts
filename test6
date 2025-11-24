@@ -1,12 +1,3 @@
-הנה גרסה משופרת עם קונטקסט מורחב, כולל הדגשה שאתה תספק UI screenshot + schema, בלי להמציא מה ה-UI צריך. כל מה שנכתב על ה-UI תוקן בהתאם.
-
-הפרומפט מוכן להעתקה:
-
-
----
-
-✅ Expanded & Corrected Prompt
-
 You are an expert in Tekton Pipelines, event-driven architecture, MongoDB performance optimization, and large-scale CI/CD telemetry systems.
 
 
@@ -152,8 +143,3 @@ Code-like examples where relevant
 
 Strong focus on performance, minimal DB writes, and minimal event consumption
 
-
-
----
-
-אם תרצה, אני יכול גם לייצר גרסה שמותאמת במיוחד לשירות Node.js עם Express או Fastify, או להתממשקות עם NATS/Kafka/Webhooks.
