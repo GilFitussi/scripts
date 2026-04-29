@@ -1,0 +1,302 @@
+Build a lightweight local web application that acts as a real-time Kubernetes/OpenShift log viewer with advanced filtering and Kibana-like UX, but WITHOUT using any external log systems.
+
+Goal
+
+Create a simple but powerful developer tool that streams logs from OpenShift/Kubernetes pods and provides a rich UI for searching, filtering, and inspecting logs in real time.
+
+The system must be minimal, local, and rely only on "oc" CLI.
+
+---
+
+🧱 Architecture
+
+OpenShift (oc logs)
+        ↓
+Node.js backend (stream handler)
+        ↓
+In-memory buffer + processing layer
+        ↓
+WebSocket
+        ↓
+Frontend UI (log viewer)
+
+---
+
+🔐 Authentication
+
+- Do NOT implement login UI
+- Assume user is already authenticated via "oc login"
+- Backend uses existing kubeconfig automatically
+
+---
+
+⚙️ Backend Requirements (Node.js)
+
+Must use:
+
+- Node.js
+- Express (optional but preferred)
+- WebSocket server
+- child_process.spawn (NOT exec for logs streaming)
+
+---
+
+Core functionality
+
+1. Deployments API
+
+GET /deployments
+
+Run:
+
+oc get deployments -o json
+
+Return:
+
+- deployment names
+- namespaces if available
+
+---
+
+2. Pods by Deployment
+
+GET /pods?deployment=<name>
+
+Steps:
+
+- Fetch deployment JSON:
+
+oc get deployment <name> -o json
+
+- Extract:
+  ".spec.selector.matchLabels"
+
+- Query pods:
+
+oc get pods -l <labels> -o json
+
+Return:
+
+- pod names
+- pod metadata (optional: status, age)
+
+---
+
+3. Logs Streaming (WebSocket)
+
+WS /logs
+
+Features:
+
+- Accept:
+  - pod name OR multiple pods
+- For each pod run:
+
+oc logs -f <pod>
+
+- Merge streams into unified output
+
+---
+
+🧠 Critical Design Requirement: BUFFER LAYER
+
+Do NOT send logs directly to frontend.
+
+Instead:
+
+In-memory buffer system
+
+- Store last 1000–5000 log lines
+- Each log line must be structured:
+
+{
+  timestamp,
+  pod,
+  rawLine,
+  level (INFO/WARN/ERROR if detectable)
+}
+
+- Maintain rolling buffer (FIFO)
+
+---
+
+🔍 Filtering System (VERY IMPORTANT)
+
+Filtering happens on the buffered logs (NOT on stream).
+
+Must support:
+
+1. Text search filter
+
+- substring match
+- live update while typing
+
+---
+
+2. Regex filter (advanced mode)
+
+- user can toggle regex mode
+
+---
+
+3. Log level filter
+
+- INFO
+- WARN
+- ERROR
+- ALL
+
+Auto-detect levels from log text if possible.
+
+---
+
+4. Pod filter
+
+- filter logs by specific pod(s)
+
+---
+
+5. Multi-pod grouping
+
+- logs should be prefixed:
+
+[pod-name] log line...
+
+---
+
+6. Pause / Resume
+
+- Pause: stop rendering new logs (but still buffer them)
+- Resume: render buffered logs
+
+---
+
+7. Clear view
+
+- clears UI but NOT backend buffer (optional toggle)
+
+---
+
+⚡ Performance Requirements
+
+- Do NOT re-render entire buffer on every log
+- Use batching (e.g., every 100–200ms)
+- Append-only rendering preferred
+- Avoid blocking UI updates
+
+---
+
+🎨 Frontend Requirements
+
+Can be:
+
+- React (preferred)
+- OR simple HTML + Vanilla JS
+
+---
+
+Layout:
+
+Left panel:
+
+- Deployment list (dropdown or sidebar)
+
+Middle panel:
+
+- Pod list (filtered by deployment)
+
+Right panel:
+
+- Log viewer
+
+---
+
+Log viewer features:
+
+Must include:
+
+1. Streaming log window
+
+- auto-scroll toggle
+
+2. Search input
+
+- live filtering on buffer
+
+3. Filter controls
+
+- Log level selector
+- Regex toggle
+- Pod selector (multi-select supported)
+
+4. Pause / Resume button
+
+5. Clear button
+
+---
+
+Log UI enhancements:
+
+Highlighting:
+
+- ERROR → red
+- WARN → yellow
+- INFO → default
+
+Optional:
+
+- timestamps dimmed
+- pod name bold
+
+---
+
+🧵 Multi-pod streaming
+
+If multiple pods selected:
+
+- merge logs into single stream
+- prefix each line with pod name
+
+---
+
+🧪 UX Requirements (VERY IMPORTANT)
+
+The tool should feel like a lightweight Kibana-like experience:
+
+- fast filtering
+- instant search results
+- smooth scrolling
+- no lag on moderate log volume
+
+---
+
+🚫 Constraints
+
+- No external logging systems (NO Loki, NO Elasticsearch)
+- No heavy UI frameworks required beyond minimal React usage
+- Must rely on "oc" CLI only
+- Keep code simple and readable
+- Must run locally
+
+---
+
+📦 Output
+
+Generate:
+
+1. Full backend code (Node.js)
+2. Frontend code
+3. Instructions to run locally
+4. Clear explanation of architecture
+
+---
+
+🎯 Final Objective
+
+A developer should be able to:
+
+- run the app locally
+- select deployment → pod
+- stream logs in real time
+- filter logs like a lightweight Kibana
+- without any external infrastructure
