@@ -48,7 +48,6 @@ React UI
 
 - Logs are stored only for a time-based window
 - Default: 30 minutes
-- User can dynamically change window:
 
 Supported values:
 
@@ -57,11 +56,11 @@ Supported values:
 - 15 min
 - 30 min
 - 1 hour
-- custom (user input)
+- custom input
 
 Behavior:
 
-- Logs outside window are automatically hidden
+- Logs outside window are automatically removed from view
 - Changing window updates UI instantly
 - No fixed-size buffers allowed
 
@@ -71,10 +70,8 @@ Behavior:
 
 SINGLE POD CONTEXT MODEL (MANDATORY)
 
-The system MUST enforce:
-
-- Only ONE pod is active at any time
-- Switching pod must:
+- Only ONE pod active at any time
+- Switching pod MUST:
   - immediately clear UI
   - reset buffer
   - stop previous stream
@@ -86,76 +83,110 @@ No multi-pod mixing allowed.
 
 🧠 STREAM STABILITY & UX PROBLEM SOLUTIONS
 
-❗ Problem: infinite streaming creates visual chaos
+🟢 Smart Auto-Scroll
 
-Solution: implement ALL of the following
-
----
-
-🟢 1. Smart Auto-Scroll
-
-- If user is at bottom → auto-scroll ON
-- If user scrolls up → auto-scroll OFF
-- Button: “Jump to live”
+- auto-scroll ON only if user is at bottom
+- scrolling up disables auto-scroll
+- button: “Jump to live”
 
 ---
 
-🟡 2. Pause on Scroll
+🟡 Pause on Scroll
 
-- scrolling up pauses live view updates
-- logs still collected in background buffer
-- indicator:
+- scrolling up pauses live rendering
+- logs still collected in buffer
+- indicators:
   - LIVE
   - PAUSED
   - CATCHING UP
 
 ---
 
-🔵 3. Batched Rendering System
+🔵 Batched Rendering
 
-- Do NOT render per log
-- Batch updates every 100–200ms
-- Append-only rendering
-
----
-
-🟣 4. Time-Based Grouping (VERY IMPORTANT)
-
-Group logs visually by time buckets:
-
-- per second
-- per 10 seconds
-- per minute (configurable)
-
-Example UI:
-
-[12:01:00]
-log line
-log line
-
-[12:01:10]
-log line
+- render logs in batches (100–200ms)
+- no per-log render
+- append-only updates
 
 ---
 
-🟠 5. Deduplication / Noise Reduction
+🟣 Time-Based Grouping
 
-If identical logs repeat:
+Group logs into time buckets:
 
-- collapse into single entry:
+- seconds
+- 10 seconds
+- minutes
+
+---
+
+🟠 Deduplication (Noise Reduction)
+
+- identical logs collapsed:
 
 (×124) timeout connecting to DB
 
-- expandable to view instances
+- expandable occurrences
 
 ---
 
-🔴 6. Log Burst Collapse
+🔴 Log Burst Collapse
 
-If many logs arrive in short time:
+- sudden spikes grouped into expandable “burst”
 
-- collapse into “burst group”
-- expandable section
+---
+
+⚪ Noise Auto Mode (NEW)
+
+- automatic hiding of repetitive logs
+- keeps only meaningful changes
+- toggle ON/OFF
+
+---
+
+🔶 Pin Log (NEW)
+
+- pin important logs to top
+- persists during streaming
+
+---
+
+🔷 Replay Last Window (NEW)
+
+- replay last N minutes from buffer
+- useful after missing an issue
+
+---
+
+🟤 Jump to First Error (NEW)
+
+- jump directly to first ERROR in selected window
+
+---
+
+🟡 Error Burst Detector (NEW)
+
+- detects spikes of errors
+- shows:
+  - “🔥 32 errors in last 10s”
+- click → jumps to burst
+
+---
+
+🟢 Trace / Request ID Follow (NEW)
+
+- click traceId/requestId
+- filter all logs belonging to same flow
+
+---
+
+🟣 Smart Highlight Rules
+
+User-defined highlights:
+
+- keywords
+- regex
+- field-based rules
 
 ---
 
@@ -169,7 +200,9 @@ If many logs arrive in short time:
   "message": "string",
   "raw": "string",
   "fields": {},
-  "hash": "dedup signature"
+  "hash": "dedup signature",
+  "traceId": "optional",
+  "requestId": "optional"
 }
 
 ---
@@ -177,19 +210,18 @@ If many logs arrive in short time:
 🔥 LOG PROCESSING ENGINE
 
 - Auto-detect JSON logs
-- Parse JSON into structured object
-- Extract fields dynamically
-- Detect log level via heuristics
-- Generate dedup hash for grouping
+- Parse structured fields
+- Extract trace/request IDs
+- Detect log level heuristically
+- Compute dedup hash
+- Detect bursts + anomalies
 
 ---
 
 🎨 UI / UX DESIGN REQUIREMENTS
 
-The system must feel like a modern developer tool:
-
-- Kibana-like inspection experience
-- VSCode-like speed
+- Kibana-like inspection
+- VSCode DevTools speed
 - Chat-like streaming feel
 
 ---
@@ -198,7 +230,7 @@ The system must feel like a modern developer tool:
 
 1. Real-time Streaming
 
-- WebSocket-based
+- WebSocket streaming
 - batched updates
 - zero flicker rendering
 
@@ -206,103 +238,85 @@ The system must feel like a modern developer tool:
 
 2. Click-to-Expand Log (Inspector)
 
-Click log → opens side panel:
+Side panel includes:
 
 - structured JSON tree
-- raw log view
-- metadata panel:
-  - pod
-  - namespace
-  - timestamp
-  - level
-- copy actions:
-  - copy raw
-  - copy JSON
-  - copy fields
+- raw log
+- metadata (pod, namespace, time, level)
+- trace/request chain view
+- copy actions
 
 ---
 
 3. ADVANCED FILTERING SYSTEM
 
-All filters apply ONLY to current selected pod:
+Applies only to active pod:
 
-- text search (live)
+- text search
 - regex mode
-- log level filter
-- field-based JSON filtering
-- multi-condition filters
-
-Filters must be composable.
+- log level filtering
+- JSON field filtering
+- trace/request filtering
+- composable filters
 
 ---
 
-4. SORTING OPTIONS
+4. SORTING
 
-- timestamp asc/desc
-- severity priority (ERROR first)
-- alphabetical message sort
-- frequency-based grouping
+- timestamp
+- severity (ERROR first)
+- frequency grouping
 
 ---
 
 5. VISUAL SYSTEM
-
-Color coding:
 
 - ERROR → red
 - WARN → yellow
 - INFO → blue
 - DEBUG → gray
 - TRACE → faded
-
-Highlight keywords:
-
-- exception
-- timeout
-- failed
-- crash
+- keyword highlights
 
 ---
 
 6. SEARCH IN SLIDING WINDOW
 
-- full-text search
-- instant filtering
-- works on visible + buffered logs
+- instant full-text search
+- works on buffer + view
 
 ---
 
 7. PAUSE / RESUME / LIVE CONTROL
 
-- pause UI rendering
-- resume live streaming
-- “catch up” mode (renders backlog smoothly)
+- pause rendering
+- resume streaming
+- catch-up mode
 
 ---
 
-8. LOG TIMELINE (OPTIONAL BUT HIGH VALUE)
+8. LOG TIMELINE
 
-- histogram of log volume over time
-- detect spikes visually
+- histogram of log volume
+- spike detection visualization
 
 ---
 
 9. SAVED FILTER PRESETS
 
-- save debugging states
-- reuse per pod/service
+- save debugging sessions
+- restore instantly per pod
 
 ---
 
 10. CONTEXTUAL ACTIONS
 
-On hover/right-click log:
-
-- copy line
+- copy log
 - copy stack trace
-- filter by this message
-- filter by this pod
+- filter by message
+- filter by pod
 - open inspector
+- follow trace
 
 ---
 
@@ -314,73 +328,90 @@ Error clustering
 
 Spike detection
 
-- detect sudden error increase
+- highlight abnormal increases
 
 Repeated failure detection
 
-- highlight recurring issues
+- detect recurring issues
 
 Noise detection
 
-- suggest hiding spam logs
+- suggest filtering spam logs
+
+Auto insights
+
+- “possible root cause cluster detected”
 
 ---
 
-12. FOCUS MODE (VERY IMPORTANT UX FEATURE)
+12. FOCUS MODE
 
-Allow developer to switch into:
+- ERROR ONLY
+- WARN + ERROR
+- keyword focus
+- field-based focus
 
-- ERROR ONLY mode
-- WARN + ERROR mode
-- specific keyword focus
-- specific field focus
+---
+
+13. TRACE-FIRST MODE (NEW)
+
+- switch view to follow request flow
+- show full lifecycle of a request across logs
+
+---
+
+14. SNAPSHOT MODE (NEW)
+
+- save current state:
+  - filters
+  - visible logs
+  - selection
+- shareable debug snapshot
+
+---
+
+15. COPY AS BUG REPORT (NEW)
+
+- export:
+  - logs
+  - filters
+  - context
+  - stack traces
 
 ---
 
 🚫 CONSTRAINTS
 
-- NO external logging systems (NO Kibana backend, NO Loki, NO Elasticsearch)
+- NO external logging systems
 - ONLY "oc logs"
 - must run locally
 - must remain lightweight and fast
 
 ---
 
-📦 OUTPUT REQUIREMENTS
+📦 OUTPUT
 
 Generate:
 
-1. Node.js backend:
-   
-   - streaming engine
-   - sliding time window
-   - dedup engine
-   - log enrichment pipeline
-
-2. React frontend:
-   
-   - modern UI with shadcn/ui
-   - virtualized log rendering
-   - inspector panel
-   - filtering system
-
+1. Node.js backend (streaming + enrichment + burst detection)
+2. React frontend (shadcn/ui + virtualized logs + inspector)
 3. WebSocket system
-
-4. Full architecture explanation
-
-5. Run instructions
+4. Sliding time window engine
+5. Full architecture explanation
+6. Run instructions
 
 ---
 
 🎯 FINAL PRODUCT GOAL
 
-A developer tool that provides:
+A developer tool that allows:
 
-- clean single-pod debugging experience
-- real-time log streaming without chaos
-- Kibana-level inspection capabilities
-- VSCode-level responsiveness
-- powerful filtering + grouping + deduplication
-- fully local, zero-infrastructure setup
+- single pod debugging in real time
+- zero noise log streaming
+- Kibana-level inspection UX
+- VSCode-level speed
+- trace-aware debugging
+- instant filtering + burst detection
+- fully local zero-infra setup
 
-This tool should significantly improve developer productivity when debugging Kubernetes/OpenShift workloads compared to "oc logs".
+This tool should dramatically reduce time to diagnose issues in Kubernetes/OpenShift environments compared to raw "oc logs".
