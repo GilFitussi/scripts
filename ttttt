@@ -1,302 +1,386 @@
-Build a lightweight local web application that acts as a real-time Kubernetes/OpenShift log viewer with advanced filtering and Kibana-like UX, but WITHOUT using any external log systems.
+Build a production-quality local web application: a real-time Kubernetes/OpenShift log explorer designed for developers.
 
-Goal
-
-Create a simple but powerful developer tool that streams logs from OpenShift/Kubernetes pods and provides a rich UI for searching, filtering, and inspecting logs in real time.
-
-The system must be minimal, local, and rely only on "oc" CLI.
+The tool should feel like a hybrid between Kibana, VSCode DevTools, and a modern real-time chat interface — but lightweight, local, and built only on "oc logs".
 
 ---
 
-🧱 Architecture
+🧱 Tech Stack
 
-OpenShift (oc logs)
-        ↓
-Node.js backend (stream handler)
-        ↓
-In-memory buffer + processing layer
-        ↓
+Frontend
+
+- React (Vite)
+- TypeScript
+- TailwindCSS
+- shadcn/ui (UI components)
+- Zustand (state management)
+- react-window (virtualized rendering)
+- WebSocket client
+
+Backend
+
+- Node.js (LTS)
+- Express (minimal API layer)
+- ws (WebSocket server)
+- child_process.spawn (for "oc logs")
+- No external logging infrastructure
+
+---
+
+🧠 Core Architecture
+
+oc logs -f
+   ↓
+Node streaming layer
+   ↓
+Log processing + enrichment engine
+   ↓
+Sliding time window buffer
+   ↓
+UI state manager (filter/sort/view state)
+   ↓
 WebSocket
-        ↓
-Frontend UI (log viewer)
+   ↓
+React UI
 
 ---
 
-🔐 Authentication
+⏳ SLIDING TIME WINDOW (DYNAMIC & REQUIRED)
 
-- Do NOT implement login UI
-- Assume user is already authenticated via "oc login"
-- Backend uses existing kubeconfig automatically
+- Logs are stored only for a time-based window
+- Default: 30 minutes
+- User can dynamically change window:
 
----
+Supported values:
 
-⚙️ Backend Requirements (Node.js)
+- 1 min
+- 5 min
+- 15 min
+- 30 min
+- 1 hour
+- custom (user input)
 
-Must use:
+Behavior:
 
-- Node.js
-- Express (optional but preferred)
-- WebSocket server
-- child_process.spawn (NOT exec for logs streaming)
-
----
-
-Core functionality
-
-1. Deployments API
-
-GET /deployments
-
-Run:
-
-oc get deployments -o json
-
-Return:
-
-- deployment names
-- namespaces if available
+- Logs outside window are automatically hidden
+- Changing window updates UI instantly
+- No fixed-size buffers allowed
 
 ---
 
-2. Pods by Deployment
+🚨 CRITICAL UX RULE
 
-GET /pods?deployment=<name>
+SINGLE POD CONTEXT MODEL (MANDATORY)
 
-Steps:
+The system MUST enforce:
 
-- Fetch deployment JSON:
+- Only ONE pod is active at any time
+- Switching pod must:
+  - immediately clear UI
+  - reset buffer
+  - stop previous stream
+  - start new stream
 
-oc get deployment <name> -o json
-
-- Extract:
-  ".spec.selector.matchLabels"
-
-- Query pods:
-
-oc get pods -l <labels> -o json
-
-Return:
-
-- pod names
-- pod metadata (optional: status, age)
+No multi-pod mixing allowed.
 
 ---
 
-3. Logs Streaming (WebSocket)
+🧠 STREAM STABILITY & UX PROBLEM SOLUTIONS
 
-WS /logs
+❗ Problem: infinite streaming creates visual chaos
 
-Features:
-
-- Accept:
-  - pod name OR multiple pods
-- For each pod run:
-
-oc logs -f <pod>
-
-- Merge streams into unified output
+Solution: implement ALL of the following
 
 ---
 
-🧠 Critical Design Requirement: BUFFER LAYER
+🟢 1. Smart Auto-Scroll
 
-Do NOT send logs directly to frontend.
+- If user is at bottom → auto-scroll ON
+- If user scrolls up → auto-scroll OFF
+- Button: “Jump to live”
 
-Instead:
+---
 
-In-memory buffer system
+🟡 2. Pause on Scroll
 
-- Store last 1000–5000 log lines
-- Each log line must be structured:
+- scrolling up pauses live view updates
+- logs still collected in background buffer
+- indicator:
+  - LIVE
+  - PAUSED
+  - CATCHING UP
+
+---
+
+🔵 3. Batched Rendering System
+
+- Do NOT render per log
+- Batch updates every 100–200ms
+- Append-only rendering
+
+---
+
+🟣 4. Time-Based Grouping (VERY IMPORTANT)
+
+Group logs visually by time buckets:
+
+- per second
+- per 10 seconds
+- per minute (configurable)
+
+Example UI:
+
+[12:01:00]
+log line
+log line
+
+[12:01:10]
+log line
+
+---
+
+🟠 5. Deduplication / Noise Reduction
+
+If identical logs repeat:
+
+- collapse into single entry:
+
+(×124) timeout connecting to DB
+
+- expandable to view instances
+
+---
+
+🔴 6. Log Burst Collapse
+
+If many logs arrive in short time:
+
+- collapse into “burst group”
+- expandable section
+
+---
+
+🧠 LOG DATA MODEL
 
 {
-  timestamp,
-  pod,
-  rawLine,
-  level (INFO/WARN/ERROR if detectable)
+  "timestamp": "ISO-8601",
+  "pod": "string",
+  "namespace": "string",
+  "level": "INFO | WARN | ERROR | DEBUG | TRACE",
+  "message": "string",
+  "raw": "string",
+  "fields": {},
+  "hash": "dedup signature"
 }
 
-- Maintain rolling buffer (FIFO)
+---
+
+🔥 LOG PROCESSING ENGINE
+
+- Auto-detect JSON logs
+- Parse JSON into structured object
+- Extract fields dynamically
+- Detect log level via heuristics
+- Generate dedup hash for grouping
 
 ---
 
-🔍 Filtering System (VERY IMPORTANT)
+🎨 UI / UX DESIGN REQUIREMENTS
 
-Filtering happens on the buffered logs (NOT on stream).
+The system must feel like a modern developer tool:
 
-Must support:
-
-1. Text search filter
-
-- substring match
-- live update while typing
+- Kibana-like inspection experience
+- VSCode-like speed
+- Chat-like streaming feel
 
 ---
 
-2. Regex filter (advanced mode)
+📊 CORE FEATURES
 
-- user can toggle regex mode
+1. Real-time Streaming
 
----
-
-3. Log level filter
-
-- INFO
-- WARN
-- ERROR
-- ALL
-
-Auto-detect levels from log text if possible.
+- WebSocket-based
+- batched updates
+- zero flicker rendering
 
 ---
 
-4. Pod filter
+2. Click-to-Expand Log (Inspector)
 
-- filter logs by specific pod(s)
+Click log → opens side panel:
 
----
-
-5. Multi-pod grouping
-
-- logs should be prefixed:
-
-[pod-name] log line...
-
----
-
-6. Pause / Resume
-
-- Pause: stop rendering new logs (but still buffer them)
-- Resume: render buffered logs
+- structured JSON tree
+- raw log view
+- metadata panel:
+  - pod
+  - namespace
+  - timestamp
+  - level
+- copy actions:
+  - copy raw
+  - copy JSON
+  - copy fields
 
 ---
 
-7. Clear view
+3. ADVANCED FILTERING SYSTEM
 
-- clears UI but NOT backend buffer (optional toggle)
+All filters apply ONLY to current selected pod:
 
----
+- text search (live)
+- regex mode
+- log level filter
+- field-based JSON filtering
+- multi-condition filters
 
-⚡ Performance Requirements
-
-- Do NOT re-render entire buffer on every log
-- Use batching (e.g., every 100–200ms)
-- Append-only rendering preferred
-- Avoid blocking UI updates
-
----
-
-🎨 Frontend Requirements
-
-Can be:
-
-- React (preferred)
-- OR simple HTML + Vanilla JS
+Filters must be composable.
 
 ---
 
-Layout:
+4. SORTING OPTIONS
 
-Left panel:
-
-- Deployment list (dropdown or sidebar)
-
-Middle panel:
-
-- Pod list (filtered by deployment)
-
-Right panel:
-
-- Log viewer
+- timestamp asc/desc
+- severity priority (ERROR first)
+- alphabetical message sort
+- frequency-based grouping
 
 ---
 
-Log viewer features:
+5. VISUAL SYSTEM
 
-Must include:
-
-1. Streaming log window
-
-- auto-scroll toggle
-
-2. Search input
-
-- live filtering on buffer
-
-3. Filter controls
-
-- Log level selector
-- Regex toggle
-- Pod selector (multi-select supported)
-
-4. Pause / Resume button
-
-5. Clear button
-
----
-
-Log UI enhancements:
-
-Highlighting:
+Color coding:
 
 - ERROR → red
 - WARN → yellow
-- INFO → default
+- INFO → blue
+- DEBUG → gray
+- TRACE → faded
 
-Optional:
+Highlight keywords:
 
-- timestamps dimmed
-- pod name bold
-
----
-
-🧵 Multi-pod streaming
-
-If multiple pods selected:
-
-- merge logs into single stream
-- prefix each line with pod name
+- exception
+- timeout
+- failed
+- crash
 
 ---
 
-🧪 UX Requirements (VERY IMPORTANT)
+6. SEARCH IN SLIDING WINDOW
 
-The tool should feel like a lightweight Kibana-like experience:
-
-- fast filtering
-- instant search results
-- smooth scrolling
-- no lag on moderate log volume
+- full-text search
+- instant filtering
+- works on visible + buffered logs
 
 ---
 
-🚫 Constraints
+7. PAUSE / RESUME / LIVE CONTROL
 
-- No external logging systems (NO Loki, NO Elasticsearch)
-- No heavy UI frameworks required beyond minimal React usage
-- Must rely on "oc" CLI only
-- Keep code simple and readable
-- Must run locally
+- pause UI rendering
+- resume live streaming
+- “catch up” mode (renders backlog smoothly)
 
 ---
 
-📦 Output
+8. LOG TIMELINE (OPTIONAL BUT HIGH VALUE)
+
+- histogram of log volume over time
+- detect spikes visually
+
+---
+
+9. SAVED FILTER PRESETS
+
+- save debugging states
+- reuse per pod/service
+
+---
+
+10. CONTEXTUAL ACTIONS
+
+On hover/right-click log:
+
+- copy line
+- copy stack trace
+- filter by this message
+- filter by this pod
+- open inspector
+
+---
+
+11. SMART DEBUG ASSIST FEATURES
+
+Error clustering
+
+- group similar errors
+
+Spike detection
+
+- detect sudden error increase
+
+Repeated failure detection
+
+- highlight recurring issues
+
+Noise detection
+
+- suggest hiding spam logs
+
+---
+
+12. FOCUS MODE (VERY IMPORTANT UX FEATURE)
+
+Allow developer to switch into:
+
+- ERROR ONLY mode
+- WARN + ERROR mode
+- specific keyword focus
+- specific field focus
+
+---
+
+🚫 CONSTRAINTS
+
+- NO external logging systems (NO Kibana backend, NO Loki, NO Elasticsearch)
+- ONLY "oc logs"
+- must run locally
+- must remain lightweight and fast
+
+---
+
+📦 OUTPUT REQUIREMENTS
 
 Generate:
 
-1. Full backend code (Node.js)
-2. Frontend code
-3. Instructions to run locally
-4. Clear explanation of architecture
+1. Node.js backend:
+   
+   - streaming engine
+   - sliding time window
+   - dedup engine
+   - log enrichment pipeline
+
+2. React frontend:
+   
+   - modern UI with shadcn/ui
+   - virtualized log rendering
+   - inspector panel
+   - filtering system
+
+3. WebSocket system
+
+4. Full architecture explanation
+
+5. Run instructions
 
 ---
 
-🎯 Final Objective
+🎯 FINAL PRODUCT GOAL
 
-A developer should be able to:
+A developer tool that provides:
 
-- run the app locally
-- select deployment → pod
-- stream logs in real time
-- filter logs like a lightweight Kibana
-- without any external infrastructure
+- clean single-pod debugging experience
+- real-time log streaming without chaos
+- Kibana-level inspection capabilities
+- VSCode-level responsiveness
+- powerful filtering + grouping + deduplication
+- fully local, zero-infrastructure setup
+
+This tool should significantly improve developer productivity when debugging Kubernetes/OpenShift workloads compared to "oc logs".
