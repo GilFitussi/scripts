@@ -1,113 +1,137 @@
-Build a production-quality local web application: a real-time Kubernetes/OpenShift log explorer designed for developers.
+Build a production-quality local web application: a real-time Kubernetes/OpenShift log explorer designed specifically for fast live debugging sessions.
 
-The tool should feel like a hybrid between Kibana, VSCode DevTools, and a modern real-time observability SaaS (like Datadog logs UI) — but lightweight, local, and built only on "oc logs".
+This is NOT an analytics platform and NOT a logging system.
 
-The UX MUST be modern, clean, and highly polished, with strong emphasis on readability, hierarchy, and fast debugging.
+This is a focused “Live Debug Console” for a single pod at a time.
+
+The goal is:
+👉 a developer should identify production issues in under 30 seconds.
 
 ---
 
-🧱 Tech Stack
+🧱 Tech Stack (STRICT)
 
 Frontend
 
 - React (Vite)
 - TypeScript
-- TailwindCSS (modern design system)
-- shadcn/ui (ALL UI components)
-- Zustand (state management)
-- react-window (virtualized log rendering)
+- TailwindCSS (clean modern UI only)
+- shadcn/ui (ONLY for basic components)
+- Zustand (single global state store)
+- react-window (required for performance)
 - WebSocket client
-
-Design System (CRITICAL)
-
-- Must use a modern SaaS UI style
-- Clean spacing, generous padding
-- Soft borders, subtle shadows
-- Dark mode first (default)
-- High contrast for logs readability
-- No cluttered UI
-
-Typography (MANDATORY)
-
-- Use a highly readable font stack:
-
-font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto;
-
-- Monospace for raw logs:
-
-font-family: JetBrains Mono, Fira Code, monospace;
-
-- Ensure:
-  - clear line spacing
-  - no dense text blocks
-  - strong hierarchy (title > filter > logs)
-
----
 
 Backend
 
 - Node.js (LTS)
-- Express (minimal API layer)
-- ws (WebSocket server)
+- ws (WebSocket)
 - child_process.spawn ("oc logs")
-- No external logging infrastructure
+- Express (minimal API only)
+- NO external services
 
 ---
 
-🧠 Core Architecture
+🎯 PRODUCT PRINCIPLE (MOST IMPORTANT RULE)
 
-oc logs -f
-   ↓
-Node streaming layer
-   ↓
-Log processing + enrichment engine
-   ↓
-Sliding time window + smart retention engine
-   ↓
-UI state manager (filters + view state)
-   ↓
-WebSocket
-   ↓
-React UI
+This tool is:
+
+«“A real-time microscope into ONE running pod”»
+
+NOT:
+
+- NOT Kibana
+- NOT analytics dashboard
+- NOT log platform
 
 ---
 
-🧭 NAVIGATION UX (CRITICAL IMPROVEMENT)
+🧭 CORE USER FLOW (MANDATORY UX)
 
-The system MUST enforce a 3-step hierarchical selection flow:
+The UI must enforce this strict flow:
 
-STEP 1: Namespace selection (Dropdown)
+Step 1: Namespace select (dropdown)
 
-- Clean dropdown UI
-- searchable
-- grouped if needed
+Step 2: Deployment select (filtered dropdown)
 
-STEP 2: Deployment selection (Dropdown)
+Step 3: Pod select (filtered dropdown)
 
-- filtered by selected namespace
-- shows deployment health indicator
+ONLY after this:
+→ logs start streaming
 
-STEP 3: Pod selection (Dropdown)
-
-- filtered by deployment
-- shows pod status (Running / CrashLoop / etc.)
-
-RULE:
-
-- User NEVER types names manually
-- Everything is selected via UI only
-- Selection flow must feel like a guided debugger setup
+❗ No manual typing of names
+❗ No free text selection
 
 ---
 
-⏳ ADVANCED TIME WINDOW SYSTEM (REPLACEMENT OF SIMPLE WINDOW)
+🧠 CORE BEHAVIOR MODEL
 
-❌ DO NOT LIMIT TO 1 HOUR
-✔ MUST SUPPORT REAL DEBUG SCENARIOS
+SINGLE POD MODE (ABSOLUTE RULE)
 
-Time Window MUST support:
+- Only ONE pod can be active
+- Switching pod:
+  - clears UI instantly
+  - stops previous stream
+  - resets state
+  - starts new stream
 
-Presets:
+No multi-pod support.
+
+---
+
+📺 MAIN UI STRUCTURE (VERY IMPORTANT)
+
+Layout (3 zones max)
+
+1. Left Sidebar (context selection)
+
+- Namespace dropdown
+- Deployment dropdown
+- Pod dropdown
+
+2. Main Panel (LOG STREAM)
+
+- live logs only
+- virtualized rendering
+- clean readable layout
+
+3. Right Panel (Inspector - optional open)
+
+- expanded log view
+- structured JSON
+- raw log
+
+---
+
+🎨 UI / UX DESIGN SYSTEM (STRICT MODERN RULES)
+
+Visual style:
+
+- modern SaaS look (like Datadog / Linear)
+- dark mode first
+- soft borders, no heavy boxes
+- minimal noise
+
+Typography (MANDATORY)
+
+- UI font:
+  Inter, system-ui, sans-serif
+- logs font:
+  JetBrains Mono
+
+Layout rules:
+
+- max 3 columns
+- max 2 nesting levels
+- generous spacing
+- no dense text walls
+
+---
+
+⏳ TIME WINDOW (SIMPLIFIED BUT POWERFUL)
+
+Replace complex systems with a simple but strong model:
+
+User-controlled options:
 
 - 1 min
 - 5 min
@@ -115,371 +139,181 @@ Presets:
 - 30 min
 - 1 hour
 - 6 hours
-- 12 hours
 - 24 hours
-- 3 days (optional)
-- 7 days (optional if performance allows)
 
----
+PLUS:
 
-Advanced Mode (CRITICAL FEATURE)
+LIVE MODE (default)
 
-User must be able to switch to:
-
-"Infinite Live Mode (Streaming Only)"
-
-- shows only live logs
-- no historical limit
-- memory-safe via intelligent sampling
-
----
-
-"Absolute Time Range Mode"
-
-User selects:
-
-- start time
-- end time
-
-Example:
-
-- from: yesterday 14:00
-- to: today 09:00
-
----
+- infinite streaming
+- shows only recent logs via smart retention
 
 Behavior:
 
-- UI updates instantly on change
-- backend adjusts filtering logic dynamically
-- sliding window still used internally for performance safety
+- changing window updates instantly
+- no fixed buffer size (time-based only)
 
 ---
 
-🚨 CRITICAL UX RULE
+🧠 STREAMING BEHAVIOR (ANTI-CHAOS SYSTEM)
 
-SINGLE POD CONTEXT MODEL
+1. Smart auto-scroll
 
-- Only ONE pod active at a time
-- Switching pod MUST:
-  - clear UI immediately
-  - reset buffer
-  - stop previous stream
-  - start new stream
+- only scroll if user is at bottom
 
----
+2. Pause on scroll up
 
-🎨 MODERN UI REQUIREMENTS (VERY IMPORTANT)
+- user scrolls up → freeze view
+- logs still collected
 
-The UI MUST feel like a modern SaaS observability tool:
+3. Batch rendering
 
-Layout:
-
-Left sidebar:
-
-- Namespace selector
-- Deployment selector
-- Pod selector
-
-Main panel:
-
-- Log stream
-
-Right panel:
-
-- Inspector (log details)
+- render logs every 100–200ms
 
 ---
 
-Visual Style:
+4. Noise control (CRITICAL)
 
-- clean spacing (not dense)
-- rounded cards (shadcn style)
-- soft separators
-- hover states
-- smooth transitions
+Deduplication:
 
----
+- identical logs grouped:
+  (×N) message
 
-Dark Mode (default):
-
-- optimized for long debugging sessions
-- low eye strain
-- high contrast logs
-
----
-
-🧠 STREAM STABILITY & UX FIXES
-
-(keep all previous ones + improvements)
-
-Smart Auto-scroll
-
-- follow tail only if user is at bottom
-
-Pause on scroll
-
-- scrolling up pauses live view
-
-Batched rendering
-
-- 100–200ms updates
-
----
-
-Time grouping
-
-- per second / per minute grouping
-
----
-
-Deduplication
-
-- collapse identical logs
-
----
-
-Burst collapse
+Burst grouping:
 
 - collapse spikes into expandable group
 
----
+Minimal UI noise rule:
 
-Noise auto reduction (NEW)
-
-- toggle to hide repetitive logs automatically
+- never spam UI with repeated logs
 
 ---
 
-Pin log (NEW)
+🔥 CORE FEATURES (KEEP IT FOCUSED)
 
-- pin important logs to top of view
+1. Real-time logs
 
----
-
-Replay last window (NEW)
-
-- replay last N minutes instantly
+WebSocket streaming from "oc logs -f"
 
 ---
 
-Jump to first error (NEW)
+2. Log inspector (click log)
 
-- instant navigation to first error in time window
-
----
-
-Error burst detector (NEW)
-
-- detect spikes
-- show:
-  - “🔥 42 errors in 12 seconds”
+- structured JSON view
+- raw log view
+- metadata:
+  - pod
+  - namespace
+  - timestamp
+  - level
 
 ---
 
-Trace / Request ID follow (NEW)
+3. Filtering (FAST & SIMPLE)
 
-- click traceId/requestId → filter full flow
-
----
-
-Smart highlight rules
-
-- keyword + regex + field-based highlighting
-
----
-
-🧠 LOG DATA MODEL
-
-{
-  "timestamp": "ISO-8601",
-  "namespace": "string",
-  "deployment": "string",
-  "pod": "string",
-  "level": "INFO | WARN | ERROR | DEBUG | TRACE",
-  "message": "string",
-  "raw": "string",
-  "fields": {},
-  "hash": "dedup signature",
-  "traceId": "optional",
-  "requestId": "optional"
-}
-
----
-
-🔥 LOG PROCESSING ENGINE
-
-- JSON detection
-- structured parsing
-- level detection
-- trace extraction
-- dedup hash
-- burst detection
-- noise scoring
-
----
-
-📊 CORE FEATURES
-
-1. Real-time streaming
-
-- WebSocket
-- batched updates
-- zero flicker
-
----
-
-2. Click-to-expand log inspector
-
-- structured JSON tree view
-- raw log
-- metadata panel
-- trace chain view
-
----
-
-3. ADVANCED FILTERING
-
-Applies to active pod only:
+Only for current pod:
 
 - text search
-- regex mode
-- log level filtering
-- field-based filtering
-- trace filtering
-- composable filters
+- log level filter:
+  - ERROR / WARN / INFO / DEBUG
+- regex toggle (optional)
+
+Filters must be instant.
 
 ---
 
-4. SORTING
-
-- timestamp
-- severity
-- frequency grouping
-
----
-
-5. VISUAL SYSTEM
+4. Highlight system
 
 - ERROR → red
 - WARN → yellow
 - INFO → blue
 - DEBUG → gray
-- TRACE → faded
-- keyword highlighting
+
+Keyword highlights:
+
+- error
+- timeout
+- exception
+- failed
 
 ---
 
-6. SEARCH IN TIME WINDOW
+5. Pause / Resume
 
-- instant filtering
-- works on buffer
-
----
-
-7. PAUSE / RESUME
-
-- live / paused / catch-up states
+- pause UI rendering only
+- resume live stream
 
 ---
 
-8. LOG TIMELINE
+6. Jump to error
 
-- histogram
-- spike detection
-
----
-
-9. SAVED FILTERS
-
-- save debugging sessions
-- restore instantly
+- button → scroll to first ERROR in view window
 
 ---
 
-10. CONTEXT ACTIONS
+🚫 EXPLICIT CONSTRAINTS
 
-- copy log
-- filter by message
-- filter by pod
-- inspect
-- follow trace
-
----
-
-11. SMART DEBUG FEATURES
-
-- error clustering
-- spike detection
-- repeated failure detection
-- noise suppression
-- auto insights
-
----
-
-12. FOCUS MODE
-
-- ERROR ONLY
-- WARN + ERROR
-- keyword focus
-- field focus
-
----
-
-13. TRACE-FIRST MODE
-
-- follow full request lifecycle
-
----
-
-14. SNAPSHOT MODE
-
-- save full debugging context
-
----
-
-15. BUG REPORT EXPORT
-
-- export logs + filters + context
-
----
-
-🚫 CONSTRAINTS
-
-- ONLY "oc logs"
+- NO Kibana-like complexity
+- NO multi-pod views
+- NO analytics dashboards
+- NO persistence layer
 - NO external logging systems
-- must be local
-- must be fast and lightweight
+- ONLY "oc logs"
 
 ---
 
-📦 OUTPUT
+🧱 STATE ARCHITECTURE RULE
+
+ALL logs must go through a single state layer:
+
+- stream → backend buffer → frontend store → UI
+- UI NEVER reads raw stream directly
+
+---
+
+📦 OUTPUT REQUIREMENTS
 
 Generate:
 
-1. Node.js backend (streaming + enrichment + burst detection + time range engine)
-2. React frontend (modern SaaS UI with shadcn/ui)
-3. WebSocket system
-4. Full hierarchical UI flow (namespace → deployment → pod)
-5. Advanced time system implementation
-6. Full architecture explanation
-7. Run instructions
+1. Node.js backend:
+   
+   - pod streaming
+   - time-based filtering
+   - WebSocket server
+
+2. React frontend:
+   
+   - clean modern UI
+   - 3-panel layout
+   - virtualized log viewer
+
+3. State management (Zustand)
+
+4. Full architecture explanation
+
+5. Run instructions
 
 ---
 
 🎯 FINAL PRODUCT GOAL
 
-A developer tool that feels like:
+A developer tool that:
 
-- Datadog Logs UX
-- Kibana inspection power
-- VSCode DevTools speed
-- Chat-like streaming simplicity
+- connects to a pod in seconds
+- shows clean live logs
+- removes noise automatically
+- lets you identify issues instantly
+- feels like a modern DevTools experience
 
-But:
+This tool is optimized for:
 
-- fully local
-- zero infrastructure
-- built only on "oc logs"
+«“find the production issue as fast as possible with zero friction”»
 
-The goal is to give developers instant understanding of production issues in Kubernetes/OpenShift with zero friction and zero noise.
+NOT for:
+
+- storing logs
+- analyzing logs
+- dashboards
+
+Only:
+👉 live debugging clarity
