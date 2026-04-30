@@ -1,283 +1,247 @@
-Build a production-quality local web application: a Kubernetes/OpenShift log explorer designed for stable, predictable debugging using a snapshot + refresh model (NO live streaming by default), with a high-quality modern UI/UX.
+You are building a production-grade local Kubernetes/OpenShift log viewer.
+
+This is a STRICT ENGINEERING SPEC.
+Follow logic EXACTLY. No improvisation.
 
 ---
 
-🧱 Tech Stack (STRICT)
+❗ CORE RULES (NON-NEGOTIABLE)
 
-Frontend
-
-- React (Vite)
-- TypeScript
-- TailwindCSS
-- shadcn/ui
-- Zustand
-- react-window
-
-Backend
-
-- Node.js (LTS)
-- Express
-- child_process.spawn (for "oc")
-- NO WebSockets
-- NO external logging systems
+- NO live streaming ("-f")
+- ONLY snapshot + refresh
+- ONLY ONE POD
+- NO auto-scroll EVER
+- UI must NEVER jump
+- Logs must remain ordered and stable
 
 ---
 
-🎯 CORE PRINCIPLE
+🧠 CORE LOG MODEL (MANDATORY)
 
-«Stability + readability + control over updates»
+Each log must be transformed into:
 
----
-
-🧭 DATA FLOW (STRICT)
-
-1. "oc get projects"
-2. "oc get deployments -n <project>"
-3. "oc get pods -n <project>"
-4. Single pod selection ONLY
-
-🚨 NEVER mix logs from multiple pods
+{
+  "id": number,              // sequential index
+  "timestamp": string,       // ISO
+  "message": string,
+  "raw": string
+}
 
 ---
 
-🧠 DATA MODEL
+🧠 STATE MODEL (FRONTEND)
 
-Initial load
+You MUST maintain:
 
-oc logs <pod> -n <project> --tail=<N>
-
-Refresh
-
-oc logs <pod> -n <project> --since-time=<lastSeenTimestamp>
-
----
-
-🎨 UI / UX (CRITICAL — HIGH PRIORITY)
-
-🔤 Typography (VERY IMPORTANT)
-
-- Logs font: JetBrains Mono
-- UI font: Inter
-- Font size MUST be readable:
-  - Logs: 13–15px minimum (NOT smaller)
-  - Line height: comfortable (1.5+)
-- No dense/compressed UI
-- Prioritize readability over density
+logs: Log[]                  // current visible logs
+lastSeenTimestamp: string    // cursor
+pendingLogs: Log[]           // new logs not yet shown
+newLogsCount: number
+isAutoRefresh: boolean
 
 ---
 
-🧱 LAYOUT STRUCTURE
+🟢 INITIAL LOAD LOGIC (STRICT)
 
-🔝 Top Bar (GLOBAL CONTROL BAR)
+1. Fetch:
 
-Contains:
+oc logs <pod> --tail=<N>
 
-- 🔍 Search input (PRIMARY FEATURE)
-- Toggle: Regex mode (on/off)
-- Log level filters (chips/buttons)
-- Refresh button
-- Auto-refresh toggle
-- Interval selector
+2. Parse logs into structured objects
 
----
+3. Sort by timestamp ASC
 
-🔍 SEARCH SYSTEM (TOP BAR)
+4. Assign IDs:
 
-- Instant filtering
-- Supports:
-  - plain text search
-  - ✅ regex mode (toggle)
-- Highlight matches in logs
-- Case sensitive toggle (optional)
+id = 1...N
+
+5. Set:
+
+logs = parsedLogs
+lastSeenTimestamp = lastLog.timestamp
+pendingLogs = []
+newLogsCount = 0
 
 ---
 
-📂 LEFT DRAWER (NAVIGATION PANEL)
+🟡 REFRESH LOGIC (CRITICAL)
 
-A collapsible drawer from the left side
+On refresh:
 
-Contains:
+oc logs <pod> --since-time=<lastSeenTimestamp>
 
-- Project (searchable dropdown)
-- Deployment (searchable dropdown)
-- Pod (searchable dropdown)
-- Tail selector
+---
+
+🔵 STEP-BY-STEP MERGE ALGORITHM (MANDATORY)
+
+Step 1: Parse new logs
+
+Step 2: Remove duplicates
+
+Duplicate = same "timestamp + message"
+
+newLogs = fetchedLogs.filter(
+  log => !logs.some(existing => 
+    existing.timestamp === log.timestamp &&
+    existing.message === log.message
+  )
+)
+
+---
+
+Step 3: If NO new logs → EXIT
+
+---
+
+Step 4: Append to pendingLogs ONLY
+
+pendingLogs = [...pendingLogs, ...newLogs]
+newLogsCount += newLogs.length
+
+🚨 DO NOT touch visible logs yet
+
+---
+
+🔴 CRITICAL UI RULE
+
+«NEW LOGS MUST NOT BE RENDERED AUTOMATICALLY»
+
+---
+
+🟣 SHOW NEW LOGS ACTION
+
+When user clicks:
+
+[Show X new logs]
+
+Then:
+
+Step 1: Merge pending into logs
+
+logs = [...logs, ...pendingLogs]
+
+---
+
+Step 2: Re-assign IDs
+
+logs = logs.map((log, index) => ({
+  ...log,
+  id: index + 1
+}))
+
+---
+
+Step 3: Trim to last N
+
+logs = logs.slice(-N)
+
+---
+
+Step 4: Update cursor
+
+lastSeenTimestamp = logs[logs.length - 1].timestamp
+
+---
+
+Step 5: Reset pending
+
+pendingLogs = []
+newLogsCount = 0
+
+---
+
+🔵 AUTO REFRESH LOGIC (STRICT)
+
+If enabled:
+
+Every X seconds:
+
+DO:
+
+- Call refresh logic
+- Update pendingLogs ONLY
+
+DO NOT:
+
+- ❌ update visible logs
+- ❌ scroll
+- ❌ modify UI position
+
+---
+
+🟠 SCROLL BEHAVIOR (MANDATORY)
+
+- UI scroll position MUST be preserved ALWAYS
+- NO automatic scrolling
+- Only scroll when user clicks:
+  - “Show new logs”
+  - “Jump to latest”
+
+---
+
+🟡 NEW LOGS INDICATOR (MANDATORY)
+
+UI must show:
+
++{newLogsCount} new logs   [Show]
 
 Rules:
 
-- Dropdowns MUST support search (typeahead)
-- Clean spacing, not cramped
-- Clear hierarchy
+- Always visible when pendingLogs > 0
+- Clicking Show triggers merge
 
 ---
 
-📄 RIGHT DRAWER (LOG INSPECTOR — KIBANA STYLE)
+🔴 EDGE CASE HANDLING
 
-Opens when clicking a log
+If logs overflow (too many new logs)
 
-Contains:
-
-1. Structured JSON viewer
-
-- Expandable tree
-- Syntax highlighted
-
-2. Raw log view
-
-3. Metadata panel
-
-- timestamp
-- project
-- pod
-- log level
-
-4. Actions
-
-- copy raw
-- copy JSON
-- copy field
-
-Drawer behavior:
-
-- slides from right
-- resizable (optional)
-- closable
+if (newLogs.length > N) {
+  showWarning("High log volume — some logs may be skipped")
+}
 
 ---
 
-🟢 MAIN LOG VIEW
+If timestamps go backwards
 
-- Center panel
-- Virtualized list
-- Stable (NO auto-scroll)
-
-Each log line:
-
-#10421  2026-04-30T09:12:33Z  INFO  message...
+- Sort again
+- If inconsistent → show error
 
 ---
 
-🔢 LOG NUMBERING
+🧱 PERFORMANCE RULES
 
-- Sequential index
-- Continues across refresh
-- Resets on pod change
-
----
-
-🟡 NEW LOGS INDICATOR
-
-+37 new logs  [Show]
-
-Rules:
-
-- Appears when new logs fetched
-- Clicking “Show” scrolls to bottom
-- No automatic scroll
+- MUST use virtualization (react-window)
+- MUST NOT re-render full list on refresh
+- MUST batch state updates
 
 ---
 
-🔵 SCROLL BEHAVIOR
+🚫 STRICTLY FORBIDDEN
 
-- NEVER auto-scroll
-- Preserve user position
-- “Jump to latest” button
+DO NOT:
 
----
-
-🧠 INTERACTION RULES
-
-- UI must NEVER shift unexpectedly
-- No layout jumps
-- No flicker
-- Smooth updates only
+- ❌ mutate logs directly during refresh
+- ❌ append logs instantly
+- ❌ scroll automatically
+- ❌ re-fetch full history
+- ❌ reset logs unless pod changes
 
 ---
 
-🔍 FEATURES
+🎯 ACCEPTANCE CRITERIA
 
-Filtering
+Implementation is correct ONLY IF:
 
-- text search
-- regex search
-- log level filter
-
----
-
-Highlighting
-
-- ERROR → red
-- WARN → yellow
-- INFO → blue
-- DEBUG → gray
-
-Keywords:
-
-- error
-- timeout
-- failed
-- exception
-
----
-
-⚠️ EDGE CASES
-
-Duplicate logs
-
-- remove on merge
-
-High volume
-
-⚠️ Some logs may have been skipped
-
----
-
-🚫 CONSTRAINTS
-
-- NO streaming UI
-- NO infinite scroll
-- NO multi-pod logs
-- NO complex grouping engines
-
----
-
-📦 OUTPUT
-
-Generate:
-
-1. Backend (Node.js)
-   
-   - projects / deployments / pods
-   - logs (tail)
-   - refresh (since-time)
-
-2. Frontend (React)
-   
-   - top bar with search + regex
-   - left drawer (selectors)
-   - right drawer (log inspector)
-   - stable log viewer
-   - readable typography
-
-3. Zustand state
-
-4. Architecture explanation
-
-5. Run instructions
-
----
-
-🎯 FINAL GOAL
-
-A clean, modern developer tool that:
-
-- feels like Kibana but lighter
-- is readable and not dense
-- never loses user position
-- gives full control over logs
+- Logs never jump
+- Logs never duplicate
+- Logs never reorder incorrectly
+- UI stays stable during refresh
+- New logs appear ONLY after user action
 
 ---
 
 🧠 FINAL PRINCIPLE
 
-«Clear logs, clear UI, zero chaos.»
+«Logs are buffered, not pushed.
+UI updates are intentional, not automatic.»
