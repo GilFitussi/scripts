@@ -1,6 +1,6 @@
 Build a production-quality local web application: a Kubernetes/OpenShift log explorer designed for stable, predictable debugging using a snapshot + refresh model (NO live streaming by default).
 
-The goal is to eliminate UI chaos while preserving full log fidelity and context.
+The goal is to eliminate UI chaos while preserving full log fidelity, ordering, and context.
 
 ---
 
@@ -31,12 +31,6 @@ This tool is:
 
 «“A stable log viewer that prioritizes clarity over real-time streaming”»
 
-NOT:
-
-- NOT a streaming dashboard
-- NOT Kibana
-- NOT an analytics system
-
 ---
 
 🧭 CORE USER FLOW (MANDATORY)
@@ -54,45 +48,58 @@ NOT:
 
 🔴 NO LIVE STREAMING ("-f") by default
 
-The system MUST NOT stream logs continuously.
-
 ---
 
 🟢 Initial Load (Snapshot)
 
-Fetch logs using:
-
 oc logs <pod> --tail=<N>
 
-Then:
+After fetch:
 
-- Render logs in UI
-- Store the timestamp of the last log line as "lastSeenTimestamp"
+- Render logs
+- Assign sequential index numbers (see below)
+- Store lastSeenTimestamp
 
 ---
 
-🟡 Refresh Mechanism (CRITICAL FEATURE)
-
-On user clicking “Refresh”:
-
-Fetch ONLY new logs using:
+🟡 Refresh (Manual)
 
 oc logs <pod> --since-time=<lastSeenTimestamp>
 
 ---
 
-🔵 Merge Behavior
+🔵 Auto Refresh (OPTIONAL BUT REQUIRED FEATURE)
 
-- Append new logs to existing logs
-- Remove duplicates (if last log overlaps)
-- Keep full chronological order
+- Interval: user configurable (2s / 5s / 10s)
+- Uses same "since-time" logic
+- MUST NOT trigger UI scroll or jump
 
 ---
 
-🟣 Retention Rule
+🟣 Merge Behavior (VERY IMPORTANT)
 
-- Keep only the last N logs (based on selected tail size)
-- Older logs are discarded from UI only (not modified at source)
+- Append new logs at the END
+- Maintain strict chronological order (by timestamp)
+- Remove duplicates
+- Preserve original log order exactly as received
+
+---
+
+🔢 LOG ORDERING & NUMBERING (NEW REQUIREMENT)
+
+Each log line MUST include:
+
+- A sequential index (monotonic increasing)
+- Example:
+
+#10421  2026-04-30T09:12:33Z  INFO  Service started
+#10422  2026-04-30T09:12:34Z  ERROR Connection failed
+
+Rules:
+
+- Index persists across refreshes
+- New logs continue numbering (no reset)
+- Index is based on arrival order in UI
 
 ---
 
@@ -100,61 +107,59 @@ oc logs <pod> --since-time=<lastSeenTimestamp>
 
 🟢 Main Log View
 
-- Displays logs as a stable list (NO auto-scroll)
-- No forced movement
+- Stable list (NO auto-scroll)
+- No jumping content
 - User scroll is fully manual
-- Logs rendered using virtualization
+- Virtualized rendering required
 
 ---
 
-🟡 Refresh UX
+🟡 New Logs Indicator (CRITICAL UX)
 
-Display indicator when new logs are available:
+When new logs arrive (manual or auto refresh):
 
-Example:
+Show:
 
-+37 new logs since last refresh
-[Refresh]
++37 new logs
+[Show]
 
----
+Rules:
 
-🔵 After Refresh
-
-- Maintain user scroll position
-- DO NOT jump automatically
-- Optionally provide:
-  - “Jump to latest” button
+- Indicator is visible but non-intrusive
+- Clicking “Show” scrolls to latest logs
+- Until clicked → user position remains unchanged
 
 ---
 
-🟣 Optional Enhancement
+🔵 Refresh Controls
 
-Auto-refresh mode (NOT live streaming):
-
-- Interval: 2–5 seconds
-- Same logic as manual refresh
-- No UI jumping
+- Button: Refresh
+- Toggle: Auto Refresh
+- Dropdown: refresh interval
 
 ---
 
-🎨 UI / UX DESIGN (MODERN)
+🟣 Scroll Behavior
+
+- NEVER auto-scroll unless user explicitly clicks “Show” or “Jump to latest”
+- Preserve scroll position after refresh
+- Provide button:
+  - “Jump to latest”
+
+---
+
+🎨 UI / UX DESIGN
 
 Style
 
-- Dark mode first
-- Clean, minimal, developer-focused
-- Inspired by: VSCode, Linear, Datadog
+- Modern, clean, minimal
+- Dark mode default
+- Inspired by: VSCode / Linear
 
 Typography
 
 - UI: Inter
-- Logs: JetBrains Mono
-
-Layout
-
-- Left: selectors (namespace, deployment, pod, tail)
-- Center: log viewer
-- Optional right: log inspector (expand log)
+- Logs: JetBrains Mono (monospace, highly readable)
 
 ---
 
@@ -162,20 +167,17 @@ Layout
 
 1. Click to Expand Log
 
-- Show structured JSON (if applicable)
-- Show raw log
-- Show metadata:
-  - timestamp
-  - pod
-  - namespace
+- Structured JSON view (if detected)
+- Raw log
+- Metadata (timestamp, pod, namespace)
 
 ---
 
-2. Filtering (client-side)
+2. Filtering
 
-- text search
-- log level filter (ERROR / WARN / INFO / DEBUG)
-- instant filtering
+- Text search (instant)
+- Log level filter (ERROR / WARN / INFO / DEBUG)
+- Works on current dataset
 
 ---
 
@@ -186,7 +188,7 @@ Layout
 - INFO → blue
 - DEBUG → gray
 
-Highlight keywords:
+Keywords highlighted:
 
 - error
 - timeout
@@ -195,41 +197,35 @@ Highlight keywords:
 
 ---
 
-⚠️ EDGE CASE HANDLING
+⚠️ EDGE CASES
 
 Duplicate logs
 
-- Remove duplicates when merging refresh results
+- Remove duplicates during merge
 
 ---
 
-Log gaps (extreme cases)
+High log volume (possible gaps)
 
-If too many logs were generated between refreshes:
+If refresh misses logs:
 
-Show message:
-
-⚠️ Some logs may have been skipped due to high volume
-Showing latest logs only
+⚠️ High log volume detected — some logs may be skipped
 
 ---
 
 Missing timestamps
 
-If logs lack timestamps:
-
-- fallback to string matching of last line
+- Fallback to string comparison of last log
 
 ---
 
 🚫 CONSTRAINTS
 
-- NO live streaming by default
-- NO infinite scroll behavior
-- NO time window filtering system
-- NO complex buffering engines
-- NO log grouping / clustering
-- NO external log platforms
+- NO streaming UI chaos
+- NO infinite scroll logic
+- NO time window system
+- NO clustering/grouping engines
+- NO external logging systems
 
 ---
 
@@ -239,22 +235,21 @@ Generate:
 
 1. Node.js backend:
    
-   - API endpoint for:
-     - initial tail fetch
-     - refresh (since-time)
-   - command execution layer ("oc logs")
+   - endpoint: initial tail
+   - endpoint: refresh (since-time)
+   - safe parsing of logs
 
 2. React frontend:
    
-   - clean UI
-   - log viewer (virtualized)
-   - refresh system
-   - tail selector
-   - filters
+   - stable log viewer
+   - numbering system
+   - refresh + auto refresh
+   - new logs indicator
+   - filtering
 
-3. State management (Zustand)
+3. Zustand state
 
-4. Full architecture explanation
+4. Architecture explanation
 
 5. Run instructions
 
@@ -264,14 +259,14 @@ Generate:
 
 A developer tool that:
 
-- never loses user context
-- never scrolls unexpectedly
-- never overloads UI
-- never misses logs (uses time-based cursor)
-- feels fast, stable, and predictable
+- preserves exact log order
+- clearly shows what is new
+- never loses user position
+- never creates scroll chaos
+- provides full control over updates
 
 ---
 
 🧠 FINAL PRINCIPLE
 
-«Logs are not streamed — they are refreshed with precision.»
+«Logs are stable, ordered, numbered — and updated only when the user chooses.»
