@@ -1,336 +1,513 @@
-Build a production-grade local web application: a Kubernetes/OpenShift Log Explorer designed for stable debugging, not real-time streaming.
+Below is a clean, strict system design document in English. It is written like a real engineering spec (not a prompt), intended to eliminate ambiguity and prevent incorrect implementations.
 
-This is a strict full-stack specification (backend + frontend + UX + data flow). No improvisation allowed.
-
----
-
-🎯 CORE PRODUCT GOAL
-
-A developer tool that:
-
-- Provides deterministic log viewing per single pod
-- Uses snapshot + refresh model (NO live streaming)
-- Has clean UX (Kibana-like inspection, VSCode-like speed)
-- Never loses context or scroll position
-- Clearly separates "existing logs" vs "new logs"
 
 ---
 
-🧭 CRITICAL DATA DISCOVERY FLOW (MANDATORY ORDER)
+📄 OpenShift/Kubernetes Log Explorer — System Design Document
 
-The entire system MUST follow this hierarchy:
 
-STEP 1 — PROJECTS (Namespaces)
+---
 
-Backend call:
+1. 🎯 Overview
+
+This system is a local developer tool for exploring Kubernetes/OpenShift logs in a stable, non-streaming, snapshot-based manner.
+
+The goal is to provide a Kibana-like debugging experience without real-time streaming complexity, ensuring:
+
+Predictable UI behavior
+
+No lost context
+
+No log duplication
+
+No scroll instability
+
+Full control over updates
+
+
+
+---
+
+2. 🧱 Technology Stack
+
+Frontend
+
+React (Vite)
+
+TypeScript
+
+TailwindCSS
+
+shadcn/ui
+
+Zustand (state management)
+
+react-window (virtualized rendering)
+
+
+Backend
+
+Node.js (LTS)
+
+Koa (REST API framework)
+
+child_process.spawn (for oc CLI only)
+
+No WebSockets
+
+No database
+
+No external logging systems
+
+
+
+---
+
+3. 🧭 System Architecture
+
+Frontend (React)
+    ↓ REST API
+Backend (Koa)
+    ↓
+OpenShift CLI (oc)
+
+The backend acts as a stateless wrapper over oc commands.
+
+
+---
+
+4. 🔄 Core Data Flow
+
+The system enforces a strict hierarchical selection flow:
+
+Projects → Deployments → Pods → Logs
+
+Each step depends on the previous one.
+
+
+---
+
+5. 🧩 Backend Design (Koa)
+
+5.1 Projects API
+
+Endpoint
+
+GET /api/projects
+
+Implementation
 
 oc get projects -o json
 
-Frontend:
-
-- Searchable dropdown (typeahead)
-- Select ONE project only
 
 ---
 
-STEP 2 — DEPLOYMENTS (filtered by project)
+5.2 Deployments API
 
-Backend call:
+Endpoint
+
+GET /api/deployments?project=<name>
+
+Implementation
 
 oc get deployments -n <project> -o json
 
-Frontend:
-
-- Searchable dropdown
-- Must be filtered by selected project
 
 ---
 
-STEP 3 — PODS (filtered by deployment)
+5.3 Pods API
 
-Backend call:
+Endpoint
+
+GET /api/pods?project=<name>
+
+Implementation
 
 oc get pods -n <project> -o json
 
-Frontend:
+Notes
 
-- Filter pods by deployment label selector
-- Searchable dropdown
-- Must allow selection of ONE pod only
+Pods must be filtered by deployment labels in backend logic.
 
----
 
-🚨 CRITICAL RULE
-
-- ONLY ONE POD ACTIVE
-- Switching pod MUST:
-  - clear logs immediately
-  - reset state
-  - reset numbering
-  - cancel pending refresh
 
 ---
 
-🧱 BACKEND DESIGN (STRICT)
+5.4 Logs (Initial Snapshot)
 
-Backend is a thin wrapper over "oc" only
+Endpoint
 
-Endpoints:
+GET /api/logs?project=<p>&pod=<pod>&tail=<N>
 
-1. Projects
-
-- "GET /projects"
-- wraps "oc get projects"
-
-2. Deployments
-
-- "GET /deployments?project=..."
-- wraps "oc get deployments -n ..."
-
-3. Pods
-
-- "GET /pods?project=..."
-- wraps "oc get pods -n ..."
-
-4. Logs (initial)
-
-GET /logs?pod=...&project=...&tail=N
-
-wraps:
-
-oc logs <pod> -n <project> --tail=N
-
-5. Logs refresh
-
-GET /logs/refresh?pod=...&since=<timestamp>
-
-wraps:
-
-oc logs <pod> -n <project> --since-time=<timestamp>
-
----
-
-🧠 FRONTEND ARCHITECTURE
-
-Layout (STRICT)
-
-TOP BAR
-LEFT DRAWER | MAIN LOG VIEW | RIGHT DRAWER
-
----
-
-📂 LEFT DRAWER (DATA SELECTION)
-
-Must contain searchable dropdowns:
-
-- Project
-- Deployment
-- Pod
-- Tail size selector
-
-Rules:
-
-- typeahead search required
-- clean spacing
-- no inline clutter
-- strict hierarchy: project → deployment → pod
-
----
-
-🔝 TOP BAR (GLOBAL CONTROL)
-
-- Search input
-- Regex toggle
-- Refresh button
-- Auto-refresh toggle
-- Refresh interval selector
-- Log level filters
-
----
-
-📄 RIGHT DRAWER (LOG INSPECTOR - KIBANA STYLE)
-
-Opens on log click:
-
-- Structured JSON tree view
-- Raw log view
-- Metadata:
-  - timestamp
-  - pod
-  - project
-- Copy buttons
-
----
-
-🟢 MAIN LOG VIEW
-
-- Virtualized list
-- Stable rendering
-- NO auto-scroll
-- Fully manual navigation
-
-Each log:
-
-#1234  2026-04-30T09:12:33Z  INFO  message
-
----
-
-🧠 LOG FETCHING MODEL (NO STREAMING)
-
-Initial load
+Implementation
 
 oc logs <pod> -n <project> --tail=<N>
 
-Refresh
-
-oc logs <pod> -n <project> --since-time=<lastSeenTimestamp>
 
 ---
 
-🔄 AUTO REFRESH (STRICT RULES)
+5.5 Logs Refresh
 
-- Interval-based polling only
-- Uses SAME refresh endpoint
-- MUST NOT:
-  - scroll UI
-  - modify visible logs directly
-- Only updates "pending logs"
+Endpoint
+
+GET /api/logs/refresh?project=<p>&pod=<pod>&since=<timestamp>
+
+Implementation
+
+oc logs <pod> -n <project> --since-time=<timestamp>
+
 
 ---
 
-🧠 LOG STATE MODEL
+6. 🧠 Logging Model (Critical)
+
+6.1 Log Object Structure
+
+Each log line is normalized into:
+
+type Log = {
+  id: number
+  timestamp: string
+  level: "INFO" | "WARN" | "ERROR" | "DEBUG" | "TRACE"
+  message: string
+  raw: string
+}
+
+
+---
+
+6.2 State Model (Frontend)
 
 logs: Log[]
 pendingLogs: Log[]
 lastSeenTimestamp: string
 newLogsCount: number
+
 selectedProject: string
 selectedDeployment: string
 selectedPod: string
 tailSize: number
+
 autoRefresh: boolean
 
----
-
-🔢 LOG NUMBERING
-
-- Sequential index per session
-- Continues across refresh
-- Resets only on pod change
 
 ---
 
-🟡 NEW LOGS BEHAVIOR
+7. 📥 Data Loading Strategy
 
-When refresh returns new logs:
+7.1 Initial Load
 
-DO NOT render immediately.
+1. Fetch logs using --tail=N
 
-Instead:
 
-- store in "pendingLogs"
-- increment "newLogsCount"
+2. Sort by timestamp ascending
 
-Show UI:
 
-+X new logs  [Show]
+3. Assign sequential IDs
 
-On click:
 
-- merge into main logs
-- re-index
-- update timestamp cursor
-- clear pending
+4. Store lastSeenTimestamp
 
----
 
-🔍 SEARCH SYSTEM
+5. Render logs
 
-- Instant filtering
-- Regex mode supported
-- Highlights matches
-- Does NOT mutate log data
+
+
 
 ---
 
-🎨 UX REQUIREMENTS
+7.2 Refresh Flow (CRITICAL)
 
-- Modern Kibana-like inspector
-- Clean VSCode-like layout
-- Minimal density
-- Readable typography
+Step 1: Fetch new logs
 
----
+oc logs --since-time=<lastSeenTimestamp>
 
-Typography (STRICT)
+Step 2: Deduplicate
 
-- UI: Inter
-- Logs: JetBrains Mono
-- Minimum log size: 14px
+A log is duplicate if:
 
----
+timestamp + message match existing log
 
-⚠️ EDGE CASES
 
-- duplicate logs → must be removed
-- high volume → show warning
-- missing timestamps → fallback ordering
 
 ---
 
-🚫 FORBIDDEN
+Step 3: Buffer (DO NOT render immediately)
 
-- NO live streaming
-- NO multi-pod logs
-- NO backend state storage
-- NO auto-scroll
-- NO grouping engines
-- NO time-window UI
-- NO re-render full log list on refresh
+pendingLogs.push(newLogs)
+newLogsCount += newLogs.length
+
 
 ---
 
-📦 OUTPUT REQUIREMENTS
+Step 4: UI decision
 
-Generate:
+Logs are only merged into UI when user explicitly clicks:
 
-Backend
+> “Show new logs”
 
-- projects API
-- deployments API
-- pods API
-- logs API (tail)
-- logs refresh API (since-time)
 
-Frontend
 
-- full UI with drawers
-- dropdown hierarchy (project → deployment → pod)
-- log viewer
-- search + regex
-- refresh system
-- state management
-
-Documentation
-
-- architecture explanation
-- data flow explanation
-- run instructions
 
 ---
 
-🎯 FINAL SYSTEM GOAL
+Step 5: Merge process
 
-A deterministic debugging tool that:
+logs = [...logs, ...pendingLogs]
+logs = reindexSequentially(logs)
+lastSeenTimestamp = logs[last].timestamp
+pendingLogs = []
+newLogsCount = 0
 
-- enforces single-pod context
-- guarantees stable ordering
-- separates new vs existing logs
-- gives full manual control over updates
-- never surprises the user visually
 
 ---
 
-🧠 FINAL PRINCIPLE
+8. 🔄 Auto Refresh System
 
-«Everything is selected → then queried → then displayed. Nothing is streamed or assumed.»
+Interval-based polling (2s–10s)
+
+Uses same refresh endpoint
+
+MUST NOT:
+
+modify visible logs directly
+
+trigger scroll changes
+
+re-render full dataset
+
+
+
+Only updates:
+
+pendingLogs
+
+newLogsCount
+
+
+
+---
+
+9. 🖥 Frontend Architecture
+
+9.1 Layout Structure
+
+TOP BAR
+LEFT DRAWER | MAIN LOG VIEW | RIGHT DRAWER
+
+
+---
+
+9.2 LEFT DRAWER (Navigation)
+
+Contains searchable dropdowns:
+
+Project selector
+
+Deployment selector
+
+Pod selector
+
+Tail size selector
+
+
+Rules:
+
+Must support typeahead search
+
+Must be hierarchical (project → deployment → pod)
+
+Must enforce single pod selection
+
+
+
+---
+
+9.3 TOP BAR (Controls)
+
+Search input
+
+Regex toggle
+
+Refresh button
+
+Auto-refresh toggle
+
+Interval selector
+
+Log level filters
+
+
+
+---
+
+9.4 RIGHT DRAWER (Inspector)
+
+Opens on log click:
+
+JSON tree viewer (if applicable)
+
+Raw log view
+
+Metadata:
+
+timestamp
+
+pod
+
+project
+
+
+Copy actions
+
+
+
+---
+
+9.5 MAIN LOG VIEW
+
+Virtualized rendering (react-window)
+
+No auto-scroll
+
+Stable DOM updates only
+
+Each log rendered as:
+
+
+#index timestamp LEVEL message
+
+
+---
+
+10. 🔍 Search System
+
+Instant filtering
+
+Regex mode supported
+
+Highlight matches
+
+Does NOT mutate underlying log data
+
+
+
+---
+
+11. 🔢 Log Numbering
+
+Sequential index per session
+
+Persistent across refresh
+
+Resets only when switching pod
+
+
+
+---
+
+12. 🎨 UI/UX Requirements
+
+Typography
+
+UI: Inter
+
+Logs: JetBrains Mono
+
+Minimum size: 14px
+
+
+Design Principles
+
+High readability
+
+Low density
+
+No layout shifting
+
+Kibana-like inspection panel
+
+VSCode-like responsiveness
+
+
+
+---
+
+13. ⚠️ Edge Cases
+
+High log volume
+
+Display warning:
+
+“Some logs may be skipped due to high volume”
+
+
+Duplicate logs
+
+Must be removed during merge
+
+Missing timestamps
+
+Fallback to order of arrival
+
+
+---
+
+14. 🚫 Forbidden Behaviors
+
+No live streaming (-f)
+
+No WebSockets
+
+No multi-pod logs
+
+No backend state persistence
+
+No auto-scroll
+
+No time-window UI
+
+No log grouping/clustering engines
+
+No full re-render on refresh
+
+
+
+---
+
+15. 🎯 Success Criteria
+
+The system is correct only if:
+
+Logs remain stable during refresh
+
+No UI jumps occur
+
+No duplicate logs appear
+
+Search works with regex
+
+Single pod context is enforced
+
+Inspector behaves like Kibana panel
+
+Refresh is explicit and controlled
+
+
+
+---
+
+🧠 Core Principle
+
+> Logs are not streamed. They are queried, buffered, and revealed only when explicitly requested by the user.
+
+
+
+
+---
+
+If you want next step, I can turn this into:
+
+actual folder structure (frontend/backend)
+
+or a working Koa + React boilerplate that follows this spec exactly (no guesswork).
