@@ -1,6 +1,4 @@
-Build a production-quality local web application: a Kubernetes/OpenShift log explorer designed for stable, predictable debugging using a snapshot + refresh model (NO live streaming by default).
-
-The goal is to eliminate UI chaos while preserving full log fidelity, strict ordering, and clear context.
+Build a production-quality local web application: a Kubernetes/OpenShift log explorer designed for stable, predictable debugging using a snapshot + refresh model (NO live streaming by default), with a high-quality modern UI/UX.
 
 ---
 
@@ -12,221 +10,208 @@ Frontend
 - TypeScript
 - TailwindCSS
 - shadcn/ui
-- Zustand (state management)
-- react-window (virtualized rendering)
+- Zustand
+- react-window
 
 Backend
 
 - Node.js (LTS)
 - Express
-- child_process.spawn (for "oc" CLI)
-- NO WebSockets (polling/refresh only)
+- child_process.spawn (for "oc")
+- NO WebSockets
 - NO external logging systems
 
 ---
 
-🎯 CORE PRODUCT PRINCIPLE
+🎯 CORE PRINCIPLE
 
-«“A stable log viewer that prioritizes clarity over real-time streaming”»
-
----
-
-🧭 DATA DISCOVERY FLOW (MANDATORY & STRICT ORDER)
-
-Data MUST be fetched in this exact order, via backend endpoints that wrap "oc":
-
-1. Projects (Namespaces)
-   
-   oc get projects -o json
-   
-   - Populate Projects dropdown
-
-2. Deployments (filtered by selected project)
-   
-   oc get deployments -n <project> -o json
-   
-   - Populate Deployments dropdown
-
-3. Pods (filtered by selected deployment + project)
-   
-   oc get pods -n <project> -o json
-   
-   - Filter pods by deployment label selector
-   - Populate Pods dropdown
+«Stability + readability + control over updates»
 
 ---
 
-🚨 CRITICAL RULE
+🧭 DATA FLOW (STRICT)
 
-SINGLE POD CONTEXT ONLY
+1. "oc get projects"
+2. "oc get deployments -n <project>"
+3. "oc get pods -n <project>"
+4. Single pod selection ONLY
 
-- Only ONE pod can be active at a time
-- Switching pod MUST:
-  - Clear UI immediately
-  - Reset state (logs, cursor, counters)
-  - Load fresh logs for selected pod
-- NO mixing logs from multiple pods under any circumstance
+🚨 NEVER mix logs from multiple pods
 
 ---
 
-🔎 DROPDOWNS UX (WITH SEARCH)
+🧠 DATA MODEL
 
-All selectors MUST be:
-
-- Searchable dropdowns (typeahead)
-- Fast filtering (client-side)
-- Keyboard accessible
-
-Fields:
-
-- Project (Namespace)
-- Deployment
-- Pod
-- Tail size
-
----
-
-🧠 DATA FETCHING MODEL
-
-🔴 NO LIVE STREAMING ("-f") by default
-
----
-
-🟢 Initial Load (Snapshot)
+Initial load
 
 oc logs <pod> -n <project> --tail=<N>
 
-After fetch:
-
-- Render logs
-- Assign sequential indices (see below)
-- Store "lastSeenTimestamp" (timestamp of last log)
-
----
-
-🟡 Refresh (Manual)
+Refresh
 
 oc logs <pod> -n <project> --since-time=<lastSeenTimestamp>
 
 ---
 
-🔵 Auto Refresh (REQUIRED FEATURE)
+🎨 UI / UX (CRITICAL — HIGH PRIORITY)
 
-- Interval: configurable (2s / 5s / 10s)
-- Uses same "since-time" logic
-- MUST NOT cause scroll jumps
+🔤 Typography (VERY IMPORTANT)
 
----
-
-🟣 Merge Behavior (CRITICAL)
-
-- Append new logs at the END
-- Maintain strict chronological order
-- Deduplicate overlaps
-- Preserve original order exactly as returned
+- Logs font: JetBrains Mono
+- UI font: Inter
+- Font size MUST be readable:
+  - Logs: 13–15px minimum (NOT smaller)
+  - Line height: comfortable (1.5+)
+- No dense/compressed UI
+- Prioritize readability over density
 
 ---
 
-🔢 LOG ORDERING & NUMBERING
+🧱 LAYOUT STRUCTURE
 
-Each log line MUST include:
+🔝 Top Bar (GLOBAL CONTROL BAR)
 
-#10421  2026-04-30T09:12:33Z  INFO  Message
+Contains:
 
-Rules:
-
-- Monotonic increasing index
-- Continues across refreshes
-- Based on arrival/merge order in UI
-
----
-
-📊 UI REQUIREMENTS
-
-🟢 Main Log View
-
-- Stable list (NO auto-scroll)
-- Virtualized rendering
-- Manual scroll only
-
----
-
-🟡 New Logs Indicator
-
-+37 new logs
-[Show]
-
-Rules:
-
-- Non-intrusive
-- Clicking “Show” jumps to latest
-- Otherwise: user position remains unchanged
-
----
-
-🔵 Controls
-
+- 🔍 Search input (PRIMARY FEATURE)
+- Toggle: Regex mode (on/off)
+- Log level filters (chips/buttons)
 - Refresh button
 - Auto-refresh toggle
 - Interval selector
-- Jump to latest
 
 ---
 
-🟣 Scroll Behavior
+🔍 SEARCH SYSTEM (TOP BAR)
 
-- NEVER auto-scroll implicitly
-- Preserve scroll position on refresh
-
----
-
-🎨 UI / UX DESIGN
-
-Style
-
-- Modern, clean, minimal
-- Dark mode default
-- Inspired by VSCode / Linear
-
-Typography
-
-- UI: Inter
-- Logs: JetBrains Mono
-
-Layout
-
-- Left/top: selectors (project → deployment → pod → tail)
-- Center: log viewer
-- Optional right: log inspector
+- Instant filtering
+- Supports:
+  - plain text search
+  - ✅ regex mode (toggle)
+- Highlight matches in logs
+- Case sensitive toggle (optional)
 
 ---
 
-🔍 LOG FEATURES
+📂 LEFT DRAWER (NAVIGATION PANEL)
 
-1. Expand Log
+A collapsible drawer from the left side
 
-- JSON structured view (if detected)
-- Raw view
-- Metadata: timestamp, project, pod
+Contains:
+
+- Project (searchable dropdown)
+- Deployment (searchable dropdown)
+- Pod (searchable dropdown)
+- Tail selector
+
+Rules:
+
+- Dropdowns MUST support search (typeahead)
+- Clean spacing, not cramped
+- Clear hierarchy
 
 ---
 
-2. Filtering
+📄 RIGHT DRAWER (LOG INSPECTOR — KIBANA STYLE)
 
-- Text search
-- Log level filter (ERROR / WARN / INFO / DEBUG)
-- Instant, client-side
+Opens when clicking a log
+
+Contains:
+
+1. Structured JSON viewer
+
+- Expandable tree
+- Syntax highlighted
+
+2. Raw log view
+
+3. Metadata panel
+
+- timestamp
+- project
+- pod
+- log level
+
+4. Actions
+
+- copy raw
+- copy JSON
+- copy field
+
+Drawer behavior:
+
+- slides from right
+- resizable (optional)
+- closable
 
 ---
 
-3. Highlighting
+🟢 MAIN LOG VIEW
+
+- Center panel
+- Virtualized list
+- Stable (NO auto-scroll)
+
+Each log line:
+
+#10421  2026-04-30T09:12:33Z  INFO  message...
+
+---
+
+🔢 LOG NUMBERING
+
+- Sequential index
+- Continues across refresh
+- Resets on pod change
+
+---
+
+🟡 NEW LOGS INDICATOR
+
++37 new logs  [Show]
+
+Rules:
+
+- Appears when new logs fetched
+- Clicking “Show” scrolls to bottom
+- No automatic scroll
+
+---
+
+🔵 SCROLL BEHAVIOR
+
+- NEVER auto-scroll
+- Preserve user position
+- “Jump to latest” button
+
+---
+
+🧠 INTERACTION RULES
+
+- UI must NEVER shift unexpectedly
+- No layout jumps
+- No flicker
+- Smooth updates only
+
+---
+
+🔍 FEATURES
+
+Filtering
+
+- text search
+- regex search
+- log level filter
+
+---
+
+Highlighting
 
 - ERROR → red
 - WARN → yellow
 - INFO → blue
 - DEBUG → gray
 
-Highlight:
+Keywords:
 
 - error
 - timeout
@@ -239,19 +224,11 @@ Highlight:
 
 Duplicate logs
 
-- Remove during merge
+- remove on merge
 
----
+High volume
 
-High volume (possible gaps)
-
-⚠️ High log volume detected — some logs may be skipped
-
----
-
-Missing timestamps
-
-- Fallback to last-line matching
+⚠️ Some logs may have been skipped
 
 ---
 
@@ -259,32 +236,28 @@ Missing timestamps
 
 - NO streaming UI
 - NO infinite scroll
-- NO time window systems
-- NO clustering/grouping
-- NO external logging platforms
+- NO multi-pod logs
+- NO complex grouping engines
 
 ---
 
-📦 OUTPUT REQUIREMENTS
+📦 OUTPUT
 
 Generate:
 
-1. Node.js backend:
+1. Backend (Node.js)
    
-   - endpoints:
-     - get projects
-     - get deployments
-     - get pods
-     - get logs (tail)
-     - refresh logs (since-time)
+   - projects / deployments / pods
+   - logs (tail)
+   - refresh (since-time)
 
-2. React frontend:
+2. Frontend (React)
    
-   - searchable dropdowns
+   - top bar with search + regex
+   - left drawer (selectors)
+   - right drawer (log inspector)
    - stable log viewer
-   - numbering system
-   - refresh + auto-refresh
-   - new logs indicator
+   - readable typography
 
 3. Zustand state
 
@@ -294,18 +267,17 @@ Generate:
 
 ---
 
-🎯 FINAL PRODUCT GOAL
+🎯 FINAL GOAL
 
-A developer tool that:
+A clean, modern developer tool that:
 
-- enforces single-pod clarity
-- preserves exact log order
-- clearly shows what’s new
+- feels like Kibana but lighter
+- is readable and not dense
 - never loses user position
-- remains fast and predictable
+- gives full control over logs
 
 ---
 
 🧠 FINAL PRINCIPLE
 
-«Logs are stable, isolated per pod, searchable, and updated only when the user chooses.»
+«Clear logs, clear UI, zero chaos.»
