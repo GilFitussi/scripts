@@ -1,0 +1,32 @@
+const { performance } = require('node:perf_hooks');
+
+function createTimer(operationName) {
+  const start = performance.now();
+  let last = start;
+  const steps = [];
+
+  return {
+    step(name) {
+      const now = performance.now();
+
+      steps.push({
+        step: name,
+        durationMs: Number((now - last).toFixed(2)),
+        totalMs: Number((now - start).toFixed(2)),
+      });
+
+      last = now;
+    },
+
+    done(logger, extra = {}) {
+      const total = performance.now() - start;
+
+      logger.info({
+        operation: operationName,
+        totalMs: Number(total.toFixed(2)),
+        steps,
+        ...extra,
+      });
+    },
+  };
+}
