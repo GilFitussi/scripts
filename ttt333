@@ -1,43 +1,19 @@
-Kafka Consumer receives a deployment event.
+Agenda should be managed as a centralized, explicitly initialized instance per process.
 
-The consumer creates an execution document in Mongo with status=pending.
+Best practice:
 
-The consumer creates an Agenda job, for example process-deployment, and passes only the executionId.
+1. Do not create a new Agenda instance every time you need to enqueue a job.
+2. Create the Agenda instance once during application startup.
+3. Initialize Agenda only after the MongoDB connection is ready.
+4. Keep the Agenda instance in a central manager module.
+5. Expose simple functions such as "initAgenda", "getAgenda", and "stopAgenda".
+6. "initAgenda" should only create and store the Agenda instance. It should not start processing jobs automatically.
+7. "getAgenda" should return the existing initialized instance so services can reuse it.
+8. Job enqueueing should go through small wrapper functions, so business services do not use Agenda directly everywhere.
+9. "agenda.start()" should be called only by the process that is responsible for executing jobs.
+10. Job definitions should be registered only in the process that actually runs jobs.
+11. On shutdown, stop Agenda gracefully to avoid leaving jobs locked.
 
-The consumer commits the Kafka offset and finishes quickly.
+In short:
 
-Agenda stores the job in Mongo and is responsible for waking up a worker.
-
-The Agenda worker receives the job.
-
-The worker loads the execution by executionId.
-
-The worker tries to claim the execution with an atomic update: status pending -> running.
-
-If the execution is not pending, the worker stops, because it was already handled or is already running.
-
-If the claim succeeds, the worker processes the whole execution.
-
-The worker fetches the project databases.
-
-The worker creates an in-memory cache for this execution only.
-
-The worker fetches database configs using Bottleneck to limit external API calls.
-
-Each config is fetched once per execution and reused from the in-memory cache if needed.
-
-The worker saves config snapshots/results to Mongo.
-
-The worker compares the configs and detects drift.
-
-The worker saves the comparison results/diffs.
-
-The worker updates the execution status to completed, completed_with_drift, partial, or failed.
-
-Agenda controls how many executions can run in parallel.
-
-Bottleneck controls how many config API calls can run in parallel inside each execution.
-
-The executions collection remains the business source of truth.
-
-Agenda is only the technical job runner.
+Manage Agenda as a controlled singleton per process: initialize it once, reuse it through a getter or wrapper, and start it only in the worker process.
