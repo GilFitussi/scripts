@@ -1,32 +1,43 @@
-const { performance } = require('node:perf_hooks');
+Kafka Consumer receives a deployment event.
 
-function createTimer(operationName) {
-  const start = performance.now();
-  let last = start;
-  const steps = [];
+The consumer creates an execution document in Mongo with status=pending.
 
-  return {
-    step(name) {
-      const now = performance.now();
+The consumer creates an Agenda job, for example process-deployment, and passes only the executionId.
 
-      steps.push({
-        step: name,
-        durationMs: Number((now - last).toFixed(2)),
-        totalMs: Number((now - start).toFixed(2)),
-      });
+The consumer commits the Kafka offset and finishes quickly.
 
-      last = now;
-    },
+Agenda stores the job in Mongo and is responsible for waking up a worker.
 
-    done(logger, extra = {}) {
-      const total = performance.now() - start;
+The Agenda worker receives the job.
 
-      logger.info({
-        operation: operationName,
-        totalMs: Number(total.toFixed(2)),
-        steps,
-        ...extra,
-      });
-    },
-  };
-}
+The worker loads the execution by executionId.
+
+The worker tries to claim the execution with an atomic update: status pending -> running.
+
+If the execution is not pending, the worker stops, because it was already handled or is already running.
+
+If the claim succeeds, the worker processes the whole execution.
+
+The worker fetches the project databases.
+
+The worker creates an in-memory cache for this execution only.
+
+The worker fetches database configs using Bottleneck to limit external API calls.
+
+Each config is fetched once per execution and reused from the in-memory cache if needed.
+
+The worker saves config snapshots/results to Mongo.
+
+The worker compares the configs and detects drift.
+
+The worker saves the comparison results/diffs.
+
+The worker updates the execution status to completed, completed_with_drift, partial, or failed.
+
+Agenda controls how many executions can run in parallel.
+
+Bottleneck controls how many config API calls can run in parallel inside each execution.
+
+The executions collection remains the business source of truth.
+
+Agenda is only the technical job runner.
