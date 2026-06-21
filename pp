@@ -1,11 +1,4 @@
-In 1 year
-
-I want to increase my impact within the team by taking ownership of larger initiatives and contributing more actively to architectural and design decisions. I aim to leverage my experience to help improve engineering practices and drive solutions that balance scalability, maintainability, and business needs.
-
-In 3 years
-
-I want to expand my influence beyond the team and play a key role in cross-team technical initiatives. I aspire to be recognized as a trusted technical leader who helps shape architectural decisions and contributes to solving complex engineering challenges while continuing to stay hands-on.
-
-In 5 years
-
-I want to continue growing my technical leadership and broaden my impact across multiple teams and domains. I aspire to contribute to long-term architectural decisions, help establish engineering best practices, and be someone others rely on for solving complex technical problems and delivering scalable, reliable solutions.
+Near-term (1-3 years)
+I would like to continue growing as a senior technical contributor and increase my impact within and beyond my team. I want to play a larger role in architectural and design decisions, lead larger and more complex initiatives, and be a trusted engineer for solving challenging technical problems. I also want to collaborate more across teams and help drive engineering best practices while remaining hands-on.
+Longer-term (3-5+ years)
+I would like to broaden my technical influence across multiple teams and domains, contributing to larger-scale architectural decisions and strategic technical initiatives. I aspire to be recognized as a technical leader who helps shape solutions, drive technical excellence, and enable teams to deliver scalable and maintainable systems, while continuing to grow and stay close to the technology.
