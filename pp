@@ -1,15 +1,20 @@
 One Year
-Lead end-to-end initiatives and become one of the people others consult for technical and architectural decisions.
-Increase visibility beyond the team by driving improvements in reliability, scalability, and engineering practices.
-Build practical expertise in AI and emerging technologies and bring them into real engineering solutions.
-Continue growing technical leadership through mentoring and knowledge sharing.
+Take ownership of larger technical initiatives from design through production and strengthen my role in architectural discussions within the team.
+Expand my technical expertise in cloud-native platforms, scalability, resiliency, and AI-driven engineering practices.
+Drive improvements that increase reliability, simplify operations, and deliver measurable business value.
+Increase collaboration and visibility beyond the immediate team through cross-team initiatives and knowledge sharing.
+Continue mentoring engineers and promoting engineering best practices.
 Three Years
-Be recognized as a Staff-level engineer with influence across multiple teams.
-Lead cross-team architecture and platform initiatives while remaining deeply hands-on.
-Drive technical direction and help shape engineering strategy within Developer Enablement.
-Become a trusted partner for complex technical decisions.
+Be recognized as a trusted technical leader with influence beyond the immediate team.
+Lead cross-team initiatives and contribute to architectural decisions with measurable business impact.
+Become a go-to engineer for solving complex technical and architectural challenges.
+Expand expertise in platform engineering and emerging technologies to help shape technical direction.
+Continue to grow as a deeply hands-on engineer while increasing influence across Developer Enablement.
 Five Years
-Operate at a Principal Engineer level, influencing architecture and technology direction across the CTO organization.
-Lead strategic innovation efforts and R&D initiatives.
-Serve as a go-to technical authority for large-scale and complex engineering challenges.
-Help define how engineering is practiced across the organization.
+Become a recognized technical leader with broad architectural influence across multiple teams and domains.
+Contribute to long-term technology and architecture direction while remaining strongly hands-on.
+Lead strategic initiatives that improve developer productivity, scalability, and engineering excellence.
+Drive innovation and evaluate emerging technologies that bring value to the organization.
+Help establish engineering standards and best practices that can be adopted across the wider organization.
+אם הייתי צריך לנסח את זה במשפט אחד שמייצג את כל המסלול:
+Grow from a strong senior engineer into a trusted technical leader with broad architectural influence across teams, while remaining deeply hands-on and focused on delivering business value.
