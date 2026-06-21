@@ -1,4 +1,1 @@
-Near-term (1-3 years)
-I would like to continue growing as a senior technical contributor and increase my impact within and beyond my team. I want to play a larger role in architectural and design decisions, lead larger and more complex initiatives, and be a trusted engineer for solving challenging technical problems. I also want to collaborate more across teams and help drive engineering best practices while remaining hands-on.
-Longer-term (3-5+ years)
-I would like to broaden my technical influence across multiple teams and domains, contributing to larger-scale architectural decisions and strategic technical initiatives. I aspire to be recognized as a technical leader who helps shape solutions, drive technical excellence, and enable teams to deliver scalable and maintainable systems, while continuing to grow and stay close to the technology.
+How can I expand my technical influence beyond my team and strengthen my ability to drive architectural decisions and lead complex technical initiatives across multiple teams?
