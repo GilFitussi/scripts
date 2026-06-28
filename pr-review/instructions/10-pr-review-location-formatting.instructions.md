@@ -2,113 +2,198 @@
 applyTo: "**"
 ---
 
-# PR Review Location and Formatting Rules
+# PR Review Formatting & GitHub Review Comment Rules
 
 This instruction has very high priority.
 
-Every finding MUST include an exact location.
+Your review must be formatted exactly like a professional GitHub Pull Request review.
 
-If the VS Code Pull Request Review extension provides line numbers, include:
+The report should be easy to scan.
 
-- file path
-- line number
-- line range when relevant
-- changed block/function name when line number is unavailable
+Every finding must point to a specific changed location.
 
-Do not produce a finding without a location.
-
-If an issue is real but you cannot identify the changed file and line/block, move it to "General Notes" instead of "Findings".
+Never produce anonymous findings.
 
 ---
 
-## Required finding format
+# Finding Location
 
-Every finding must use this exact format:
+Every finding MUST include:
 
-```md
-## Finding <number>: <short title>
+- File path
+- Line number or line range (when available)
+- Function, method or class name (if available)
 
-**Severity:** Critical | High | Medium | Low | Suggestion  
-**Confidence:** High | Medium | Low  
-**File:** `path/to/file.ext`  
-**Line:** `<line number or range>`  
-**Changed block:** `<function/class/block name if available>`
+If line numbers are unavailable, identify the closest changed block.
+
+If you cannot associate the issue with a changed location, move it to **General Notes** instead of **Findings**.
+
+---
+
+# Finding Format
+
+Every finding must follow this format:
+
+## Finding <number>: <Short Title>
+
+**Severity:** Critical | High | Medium | Low | Suggestion
+
+**Confidence:** High | Medium | Low
+
+**File**
+`src/services/user.service.ts`
+
+**Line**
+`143-156`
+
+**Changed Block**
+`createUser()`
 
 ### What I found
 
-<clear explanation>
+Explain the issue clearly.
 
 ### Why it matters
 
-<production impact / correctness impact>
+Explain the production impact.
 
 ### Suggested fix
 
-<concrete fix>
-
-### GitHub review comment
-
-> <human-sounding comment that can be pasted directly on the PR line>
-```
+Describe the preferred solution.
 
 ---
 
-## Sorting
+## GitHub Review Comment
 
-Sort findings by:
+The following comment should be ready to paste directly into GitHub.
 
-1. Severity
-2. Confidence
-3. File path
-4. Line number
+Rules:
+
+- Sound like an experienced teammate.
+- Never sound robotic.
+- Never mention AI.
+- Keep comments concise.
+- Be respectful.
+- Focus on the changed code only.
+
+If referring to code:
+
+- Use Markdown code formatting.
+- Use inline code (`variable`) for identifiers.
+- Use fenced code blocks for multi-line examples.
+- Always specify the language.
+
+Example:
+
+> I think this can fail when `user` is `undefined`.
+>
+> Since we're dereferencing `user.id` immediately afterwards, we could end up throwing before reaching the error handler.
+>
+> Something like this would make the behavior safer:
+>
+> ```ts
+> if (!user) {
+>   return;
+> }
+> ```
+>
+> This also makes the intent a bit clearer.
+
+Never write huge comments.
+
+Prefer comments between 3 and 10 lines.
+
+If suggesting code, include only the minimal snippet required.
+
+Do not rewrite entire functions.
 
 ---
 
-## Output layout
+# Output Layout
 
-Always produce the final review in this order:
+Always return sections in this order:
 
 # Executive Summary
 
-Short summary of the PR quality.
+Short overview.
+
+---
 
 # Review Scorecard
 
 | Category | Score | Notes |
-|---|---:|---|
-| Correctness | X/10 | ... |
-| Tests | X/10 | ... |
-| Error Handling | X/10 | ... |
-| Security | X/10 | ... |
-| Performance | X/10 | ... |
-| Maintainability | X/10 | ... |
-| Observability | X/10 | ... |
+|-----------|------:|-------|
+| Correctness | X/10 | |
+| Tests | X/10 | |
+| Error Handling | X/10 | |
+| Security | X/10 | |
+| Performance | X/10 | |
+| Maintainability | X/10 | |
+| Observability | X/10 | |
+
+---
 
 # Findings
 
-All findings in the required format.
+Sort by:
+
+1. Severity
+2. Confidence
+3. File
+4. Line
+
+---
 
 # Missing Tests
 
-Use this format:
+Use a table.
 
-| Test | File / Area | Why |
-|---|---|---|
-| ... | ... | ... |
+| Test | Area | Why |
+|------|------|-----|
+
+---
 
 # General Notes
 
-Only include relevant notes that are not line-specific.
+Only for findings that cannot be attached to a changed line.
+
+---
 
 # Positive Feedback
 
-List real positives only.
+Mention real good engineering decisions only.
+
+---
 
 # Final Recommendation
 
 Include:
 
-- Production Readiness Score: X/10
-- Risk Level: Very Low | Low | Medium | High | Critical
-- Merge Recommendation: ✅ Ready to merge | ⚠ Merge after fixes | ❌ Do not merge
-- Reason
+- Production Readiness Score (1–10)
+- Risk Level
+- Merge Recommendation
+- Short explanation
+
+---
+
+# Quality Rules
+
+Do not invent findings.
+
+Do not invent praise.
+
+Do not report low-confidence speculation.
+
+Do not report issues unrelated to the changed code.
+
+If there are no meaningful issues, explicitly say:
+
+> I couldn't find any production-impacting issues in the current changes.
+
+Still provide:
+
+- Executive Summary
+- Scorecard
+- Positive Feedback
+- Production Readiness Score
+- Merge Recommendation
