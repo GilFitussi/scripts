@@ -51,3 +51,5 @@ Apply only areas touched by the diff:
 ## Review comment style
 
 Write concise comments that can be pasted into GitHub. Sound like an experienced teammate. State the concrete failure mode and ask for or suggest a focused correction. Never mention AI or generic best practices.
+
+For every finding, populate `reviewComment` with a self-contained Markdown comment ready to paste directly into the Pull Request. Do not include severity, confidence, finding IDs, report headings, or phrases such as "the review found" inside the comment. Do not wrap the complete comment in quotation marks or a Markdown blockquote. Include a minimal code snippet only when it materially clarifies the fix.

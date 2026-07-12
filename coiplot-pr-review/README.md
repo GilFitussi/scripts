@@ -22,7 +22,67 @@ A reusable GitHub Copilot customization pack for high-signal local pull request 
 
 ## Installation
 
-### 1. Copy the customization files
+### Personal installation on macOS — install once for every repository
+
+Use this option when the review pack is for your own VS Code profile. You install it once and then run the same review prompts from any Git repository without copying `.github` files into each project.
+
+Keep this package in a stable location on your Mac, then open Terminal in the package directory:
+
+```bash
+cd /path/to/scripts/coiplot-pr-review
+chmod +x ./install-personal.sh
+./install-personal.sh
+```
+
+The installer copies the shared shell, Python, and schema files to:
+
+```text
+~/.copilot/pr-review
+```
+
+It then prints the exact entries to add to your VS Code User Settings. In VS Code:
+
+1. Press `Cmd+Shift+P`.
+2. Run `Preferences: Open User Settings (JSON)`.
+3. Add the paths printed by `install-personal.sh`.
+
+They will look similar to:
+
+```jsonc
+{
+  "chat.instructionsFilesLocations": {
+    "/Users/your-name/Projects/scripts/coiplot-pr-review/.github/instructions": true
+  },
+  "chat.promptFilesLocations": {
+    "/Users/your-name/Projects/scripts/coiplot-pr-review/.github/prompts": true
+  }
+}
+```
+
+Use the actual absolute path printed by the installer. If either setting already exists, add the new path to its existing object instead of creating a duplicate setting.
+
+Reload VS Code with `Developer: Reload Window`. Run `Chat: Open Customizations` and confirm the prompts and instructions are visible.
+
+To keep generated review artifacts ignored across all of your repositories without changing their `.gitignore` files, configure a personal global ignore once:
+
+```bash
+git config --global core.excludesFile "$HOME/.gitignore_global"
+grep -qxF '.pr-review/' "$HOME/.gitignore_global" 2>/dev/null || echo '.pr-review/' >> "$HOME/.gitignore_global"
+```
+
+You can now open any repository in VS Code, select Copilot **Agent** mode, and run:
+
+```text
+/full-local-pr-review against origin/main
+```
+
+Replace `origin/main` when the repository uses a different base branch. The report is generated inside the currently opened repository at `.pr-review/report.html`, but no customization files are copied into that repository.
+
+After updating this package, rerun `./install-personal.sh` to refresh the shared tools, then reload VS Code. For troubleshooting and uninstall instructions, see [PERSONAL-INSTALL.md](PERSONAL-INSTALL.md).
+
+### Repository installation — share with a team
+
+#### 1. Copy the customization files
 
 Copy this package's `.github` directory into the root of the repository that you want to review:
 
@@ -53,7 +113,7 @@ your-repository/
             └── validate-and-render.ps1
 ```
 
-### 2. Ignore generated reports
+#### 2. Ignore generated reports
 
 Add this entry to the target repository's `.gitignore`:
 
@@ -63,7 +123,7 @@ Add this entry to the target repository's `.gitignore`:
 
 Generated diffs, findings, and HTML reports can contain source-code context and should normally remain local.
 
-### 3. Confirm VS Code discovered the files
+#### 3. Confirm VS Code discovered the files
 
 1. Open the target repository root in VS Code.
 2. Open the Command Palette.
@@ -110,6 +170,28 @@ The full workflow creates:
 .pr-review/findings.json
 .pr-review/report.html
 ```
+
+Each finding in `.pr-review/findings.json` contains a `reviewComment` field with standalone Markdown that is ready to paste directly into the GitHub Pull Request review:
+
+```json
+{
+  "id": "PR-001",
+  "title": "Concurrent requests can overwrite the state transition",
+  "severity": "high",
+  "confidence": "high",
+  "category": "concurrency",
+  "file": "src/jobs/worker.ts",
+  "line": 146,
+  "changedBehavior": "The state is now read and updated in separate operations.",
+  "trigger": "Two workers process the same record concurrently.",
+  "evidence": "Both workers can read the previous state before either update completes.",
+  "impact": "A completed record can be overwritten or processed twice.",
+  "suggestedFix": "Use an atomic conditional update that includes the expected previous state.",
+  "reviewComment": "This update is vulnerable to a race when two workers process the same record. Both can read the previous state before either write completes, which can duplicate processing or overwrite the final status. Could we make this an atomic conditional update using the expected previous state?"
+}
+```
+
+The HTML report also includes a **Copy comment** button for every finding.
 
 ## Other review modes
 
@@ -177,3 +259,5 @@ The reviewer avoids installing dependencies, starting persistent services, or ma
 - Continue to use CI, automated tests, security scanners, and human review before merging production changes.
 
 For the shorter installation reference, see [INSTALL.md](INSTALL.md).
+
+For a one-time personal installation that works across all repositories without copying files into each project, see [PERSONAL-INSTALL.md](PERSONAL-INSTALL.md).

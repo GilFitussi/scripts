@@ -55,7 +55,7 @@ $cards = foreach ($f in ($report.findings | Sort-Object { $severityRank[$_.sever
   <h4>Evidence</h4><p>$(ConvertTo-HtmlText $f.evidence)</p>
   <h4>Impact</h4><p>$(ConvertTo-HtmlText $f.impact)</p>
   <h4>Suggested fix</h4><p>$(ConvertTo-HtmlText $f.suggestedFix)</p>
-  <h4>GitHub review comment</h4><pre>$safeComment</pre>
+  <h4>GitHub review comment</h4><button class="copy" type="button" onclick="copyComment(this)">Copy comment</button><pre class="review-comment">$safeComment</pre>
 </article>
 "@
 }
@@ -75,7 +75,7 @@ $html = @"
 <section><h2>Verification</h2><table><thead><tr><th>Check</th><th>Command</th><th>Status</th><th>Result</th></tr></thead><tbody>$($checks -join "`n")</tbody></table></section>
 <section><h2>Missing tests</h2><table><thead><tr><th>Area</th><th>Test</th><th>Reason</th></tr></thead><tbody>$($testRows -join "`n")</tbody></table></section>
 <section><h2>Limitations</h2><ul>$($limits -join "`n")</ul></section>
-</main><script>function filterFindings(s){document.querySelectorAll('.finding').forEach(x=>x.classList.toggle('hidden',s!=='all'&&x.dataset.severity!==s))}</script></body></html>
+</main><script>function filterFindings(s){document.querySelectorAll('.finding').forEach(x=>x.classList.toggle('hidden',s!=='all'&&x.dataset.severity!==s))}async function copyComment(button){const text=button.parentElement.querySelector('.review-comment').textContent;await navigator.clipboard.writeText(text);const old=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=old,1400)}</script></body></html>
 "@
 
 $parent = Split-Path -Parent $OutputPath

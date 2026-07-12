@@ -40,7 +40,11 @@
           "evidence": { "type": "string" },
           "impact": { "type": "string" },
           "suggestedFix": { "type": "string" },
-          "reviewComment": { "type": "string" }
+          "reviewComment": {
+            "type": "string",
+            "minLength": 20,
+            "description": "A concise, self-contained Markdown comment ready to paste directly into a GitHub Pull Request review. It must describe the concrete risk and requested fix without AI disclaimers, report metadata, severity labels, or surrounding explanation."
+          }
         }
       }
     },

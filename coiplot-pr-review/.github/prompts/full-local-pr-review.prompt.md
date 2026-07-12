@@ -26,7 +26,20 @@ Separately inspect and report whether staged, unstaged, and untracked changes ex
 
 ## 2. Collect context
 
-Run `.github/pr-review/scripts/collect-review-context.ps1` with the resolved base ref. Read `.pr-review/context.json` and `.pr-review/pr.diff`.
+Locate the review tools in this order:
+
+1. Personal installation: `$HOME/.copilot/pr-review`.
+2. Repository installation: `.github/pr-review`.
+
+Use the first location containing the schema and tools for the current operating system. On macOS/Linux, require `scripts/collect-review-context.sh` and `scripts/validate-and-render.py`. On Windows, require the corresponding PowerShell scripts. If no complete tool set exists, stop and explain that the personal or repository tools are not installed.
+
+On macOS/Linux run:
+
+```bash
+bash "<tool-root>/scripts/collect-review-context.sh" --base-ref "<base-ref>"
+```
+
+On Windows run `<tool-root>/scripts/collect-review-context.ps1` with the resolved base ref. Then read `.pr-review/context.json` and `.pr-review/pr.diff`.
 
 Read PR title, description, linked issue, acceptance criteria, and design documents when available. If unavailable, state that intent was inferred from the diff and repository context.
 
@@ -48,9 +61,11 @@ Record the exact command, status, duration if known, and a concise result. A com
 
 ## 5. Write structured results
 
-Create `.pr-review/findings.json` conforming to `.github/pr-review/schema/findings.schema.json`.
+Create `.pr-review/findings.json` conforming to `<tool-root>/schema/findings.schema.json`.
 
 Every finding must contain a changed file and an added/modified line from the committed PR diff. Use `limitations` for unavailable context or incomplete checks. Do not create a finding merely because tests did not run.
+
+For each finding, write `reviewComment` as standalone Markdown that the user can copy from the JSON or HTML report and paste directly into the GitHub PR conversation. The comment must make sense without the rest of the report. Do not include the finding ID, severity, confidence, or JSON/report terminology in it.
 
 Set the recommendation deterministically:
 
@@ -61,10 +76,16 @@ Set the recommendation deterministically:
 
 ## 6. Validate and render
 
-Run:
+On macOS/Linux run:
+
+```bash
+python3 "<tool-root>/scripts/validate-and-render.py" --input .pr-review/findings.json --context .pr-review/context.json --output .pr-review/report.html
+```
+
+On Windows run:
 
 ```powershell
-.github/pr-review/scripts/validate-and-render.ps1 -InputPath .pr-review/findings.json -ContextPath .pr-review/context.json -OutputPath .pr-review/report.html
+& "<tool-root>/scripts/validate-and-render.ps1" -InputPath .pr-review/findings.json -ContextPath .pr-review/context.json -OutputPath .pr-review/report.html
 ```
 
 Fix only report/schema/location errors and rerun until validation succeeds. Do not weaken validation or invent locations.
