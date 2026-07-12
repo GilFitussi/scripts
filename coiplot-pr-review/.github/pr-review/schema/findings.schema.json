@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Local PR Review Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["metadata", "summary", "findings", "missingTests", "checks", "limitations", "recommendation"],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "baseRef", "head", "mergeBase", "generatedAt"],
+      "properties": {
+        "title": { "type": "string" },
+        "baseRef": { "type": "string" },
+        "head": { "type": "string" },
+        "mergeBase": { "type": "string" },
+        "generatedAt": { "type": "string" },
+        "businessContext": { "type": "string" }
+      }
+    },
+    "summary": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "severity", "confidence", "category", "file", "line", "changedBehavior", "trigger", "evidence", "impact", "suggestedFix", "reviewComment"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^PR-[0-9]{3}$" },
+          "title": { "type": "string" },
+          "severity": { "enum": ["critical", "high", "medium"] },
+          "confidence": { "enum": ["high", "medium"] },
+          "category": { "enum": ["correctness", "security", "reliability", "concurrency", "data", "contract", "performance", "operations", "tests"] },
+          "file": { "type": "string" },
+          "line": { "type": "integer", "minimum": 1 },
+          "endLine": { "type": "integer", "minimum": 1 },
+          "symbol": { "type": "string" },
+          "changedBehavior": { "type": "string" },
+          "trigger": { "type": "string" },
+          "evidence": { "type": "string" },
+          "impact": { "type": "string" },
+          "suggestedFix": { "type": "string" },
+          "reviewComment": { "type": "string" }
+        }
+      }
+    },
+    "missingTests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["area", "test", "reason"],
+        "properties": { "area": { "type": "string" }, "test": { "type": "string" }, "reason": { "type": "string" } }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "command", "status", "result"],
+        "properties": {
+          "name": { "type": "string" }, "command": { "type": "string" },
+          "status": { "enum": ["passed", "failed", "not_run", "unavailable"] }, "result": { "type": "string" }
+        }
+      }
+    },
+    "limitations": { "type": "array", "items": { "type": "string" } },
+    "recommendation": { "enum": ["ready_to_merge", "ready_with_caveats", "merge_after_fixes", "do_not_merge"] }
+  }
+}
