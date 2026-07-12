@@ -1,9 +1,3 @@
----
-name: PR Review Core
-description: High-signal, diff-scoped rules for local pull request reviews.
-applyTo: "**"
----
-
 # Pull request review rules
 
 - Treat the pull request diff as the review target. Never start by scanning the whole repository.

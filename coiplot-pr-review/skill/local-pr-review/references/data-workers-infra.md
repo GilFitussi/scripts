@@ -1,9 +1,3 @@
----
-name: Data Workers and Infrastructure PR Review
-description: Extra checks for databases, queues, workers, deployment configuration, and secrets.
-applyTo: "**/*.{js,ts,mjs,cjs,json,yaml,yml,sql,sh,ps1}"
----
-
 # Data, worker, and infrastructure checks
 
 Apply only relevant sections.

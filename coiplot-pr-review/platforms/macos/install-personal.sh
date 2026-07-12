@@ -3,38 +3,25 @@ set -euo pipefail
 
 PLATFORM_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGE_ROOT="$(cd "$PLATFORM_ROOT/../.." && pwd)"
-TOOL_DIRECTORY="${1:-$HOME/.copilot/pr-review}"
-SOURCE_SCRIPTS="$PLATFORM_ROOT/scripts"
-SOURCE_SCHEMA="$PACKAGE_ROOT/.github/pr-review/schema"
+SOURCE_SKILL="$PACKAGE_ROOT/skill/local-pr-review"
+SKILLS_ROOT="${1:-$HOME/.copilot/skills}"
+TARGET_SKILL="$SKILLS_ROOT/local-pr-review"
+STAGING_SKILL="$SKILLS_ROOT/.local-pr-review.installing"
 
-case "$TOOL_DIRECTORY" in
-  ""|"/"|"$HOME")
-    echo "Refusing unsafe tool directory: '$TOOL_DIRECTORY'" >&2
-    exit 1
-    ;;
+case "$SKILLS_ROOT" in
+  ""|"/"|"$HOME") echo "Refusing unsafe skills directory: '$SKILLS_ROOT'" >&2; exit 1 ;;
 esac
 
-if [[ ! -f "$SOURCE_SCRIPTS/collect-review-context.sh" || ! -f "$SOURCE_SCHEMA/findings.schema.json" ]]; then
-  echo "Could not find the bundled macOS review tools." >&2
-  exit 1
-fi
+[[ -f "$SOURCE_SKILL/SKILL.md" ]] || { echo "Missing skill source: $SOURCE_SKILL/SKILL.md" >&2; exit 1; }
+[[ -f "$SOURCE_SKILL/scripts/macos/collect-review-context.sh" ]] || { echo "Incomplete macOS skill scripts." >&2; exit 1; }
+[[ -f "$SOURCE_SKILL/references/findings.schema.json" ]] || { echo "Missing findings schema." >&2; exit 1; }
 
-mkdir -p "$TOOL_DIRECTORY"
-rm -rf "$TOOL_DIRECTORY/scripts" "$TOOL_DIRECTORY/schema"
-cp -R "$SOURCE_SCRIPTS" "$TOOL_DIRECTORY/scripts"
-cp -R "$SOURCE_SCHEMA" "$TOOL_DIRECTORY/schema"
-chmod +x "$TOOL_DIRECTORY/scripts/collect-review-context.sh"
+mkdir -p "$SKILLS_ROOT"
+rm -rf "$STAGING_SKILL"
+cp -R "$SOURCE_SKILL" "$STAGING_SKILL"
+chmod +x "$STAGING_SKILL/scripts/macos/collect-review-context.sh"
+rm -rf "$TARGET_SKILL"
+mv "$STAGING_SKILL" "$TARGET_SKILL"
 
-echo "Personal PR review tools installed at: $TOOL_DIRECTORY"
-echo
-echo "Add these entries to VS Code User settings.json:"
-cat <<EOF
-"chat.instructionsFilesLocations": {
-  "$PACKAGE_ROOT/.github/instructions": true
-},
-"chat.promptFilesLocations": {
-  "$PACKAGE_ROOT/.github/prompts": true
-}
-EOF
-echo
-echo "Reload VS Code, open any Git repository, and run /full-local-pr-review."
+echo "Installed Copilot skill: $TARGET_SKILL"
+echo "Reload VS Code, select Agent mode, and run: /local-pr-review against origin/main"

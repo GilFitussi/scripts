@@ -1,9 +1,3 @@
----
-name: Node and TypeScript PR Review
-description: Extra checks for changed JavaScript and TypeScript application code.
-applyTo: "**/*.{js,jsx,ts,tsx,mjs,cjs}"
----
-
 # Node.js and TypeScript checks
 
 For changed code, verify when relevant:

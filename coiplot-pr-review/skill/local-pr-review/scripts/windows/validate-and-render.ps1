@@ -31,7 +31,7 @@ foreach ($lineText in (Get-Content $diffPath)) {
 
 $ids = @{}
 foreach ($finding in $report.findings) {
-    foreach ($field in @("id", "title", "severity", "confidence", "category", "file", "line", "evidence", "impact", "suggestedFix", "reviewComment")) {
+    foreach ($field in @("id", "title", "severity", "confidence", "category", "file", "line", "changedBehavior", "trigger", "evidence", "impact", "suggestedFix", "reviewComment")) {
         if (-not $finding.PSObject.Properties.Name.Contains($field) -or $null -eq $finding.$field -or "$($finding.$field)".Length -eq 0) {
             throw "Finding is missing '$field': $($finding | ConvertTo-Json -Compress)"
         }

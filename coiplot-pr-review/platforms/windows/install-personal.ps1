@@ -1,39 +1,31 @@
 param(
-    [string]$ToolDirectory = (Join-Path $HOME ".copilot\pr-review")
+    [string]$SkillsRoot = (Join-Path $HOME ".copilot\skills")
 )
 
 $ErrorActionPreference = "Stop"
 $platformRoot = $PSScriptRoot
 $packageRoot = (Resolve-Path (Join-Path $platformRoot "..\..")).Path
-$sourceScripts = Join-Path $platformRoot "scripts"
-$sourceSchema = Join-Path $packageRoot ".github\pr-review\schema"
+$sourceSkill = Join-Path $packageRoot "skill\local-pr-review"
+$targetSkill = Join-Path $SkillsRoot "local-pr-review"
+$stagingSkill = Join-Path $SkillsRoot ".local-pr-review.installing"
 
-if ([string]::IsNullOrWhiteSpace($ToolDirectory) -or $ToolDirectory -eq $HOME) {
-    throw "Refusing unsafe tool directory: '$ToolDirectory'."
+if ([string]::IsNullOrWhiteSpace($SkillsRoot) -or $SkillsRoot -eq $HOME) {
+    throw "Refusing unsafe skills directory: '$SkillsRoot'."
 }
 
-if (-not (Test-Path (Join-Path $sourceScripts "collect-review-context.ps1"))) {
-    throw "Could not find the bundled Windows PR review tools below '$sourceScripts'."
+foreach ($required in @(
+    (Join-Path $sourceSkill "SKILL.md"),
+    (Join-Path $sourceSkill "scripts\windows\collect-review-context.ps1"),
+    (Join-Path $sourceSkill "references\findings.schema.json")
+)) {
+    if (-not (Test-Path $required)) { throw "Incomplete skill package. Missing: $required" }
 }
 
-New-Item -ItemType Directory -Force -Path $ToolDirectory | Out-Null
-Remove-Item -Recurse -Force -ErrorAction SilentlyContinue -LiteralPath (Join-Path $ToolDirectory "scripts"), (Join-Path $ToolDirectory "schema")
-Copy-Item -Recurse -Force -Path $sourceScripts -Destination $ToolDirectory
-Copy-Item -Recurse -Force -Path $sourceSchema -Destination $ToolDirectory
+New-Item -ItemType Directory -Force -Path $SkillsRoot | Out-Null
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue -LiteralPath $stagingSkill
+Copy-Item -Recurse -Force -Path $sourceSkill -Destination $stagingSkill
+Remove-Item -Recurse -Force -ErrorAction SilentlyContinue -LiteralPath $targetSkill
+Move-Item -LiteralPath $stagingSkill -Destination $targetSkill
 
-$resolvedPackage = (Resolve-Path $packageRoot).Path.Replace("\", "/")
-$resolvedTools = (Resolve-Path $ToolDirectory).Path
-
-Write-Host "Personal PR review tools installed at: $resolvedTools"
-Write-Host ""
-Write-Host "Add these entries to your VS Code User settings.json:"
-Write-Host @"
-"chat.instructionsFilesLocations": {
-  "$resolvedPackage/.github/instructions": true
-},
-"chat.promptFilesLocations": {
-  "$resolvedPackage/.github/prompts": true
-}
-"@
-Write-Host ""
-Write-Host "Then reload VS Code and run /full-local-pr-review from any Git repository."
+Write-Host "Installed Copilot skill: $targetSkill"
+Write-Host "Reload VS Code, select Agent mode, and run: /local-pr-review against origin/main"

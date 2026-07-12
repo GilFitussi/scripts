@@ -52,7 +52,7 @@ if missing:
 
 valid_lines = changed_lines(diff_path.read_text(encoding="utf-8-sig", errors="replace"))
 seen = set()
-finding_fields = {"id", "title", "severity", "confidence", "category", "file", "line", "evidence", "impact", "suggestedFix", "reviewComment"}
+finding_fields = {"id", "title", "severity", "confidence", "category", "file", "line", "changedBehavior", "trigger", "evidence", "impact", "suggestedFix", "reviewComment"}
 for finding in report["findings"]:
     absent = [key for key in finding_fields if key not in finding or finding[key] in (None, "")]
     if absent:
