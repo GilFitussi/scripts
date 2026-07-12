@@ -103,6 +103,7 @@ On Windows validate and render with:
 ```
 
 Fix report data or locations until validation passes. Never weaken validation or invent a changed location.
+Use the bundled shared HTML template through the platform renderer; do not generate a separate ad-hoc HTML design.
 
 ## Respond
 

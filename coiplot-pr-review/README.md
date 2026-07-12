@@ -87,6 +87,15 @@ The skill never writes review artifacts into the repository. Reports are organiz
 
 Each finding contains a `reviewComment` field with standalone Markdown ready to paste directly into a GitHub Pull Request. The HTML report includes a **Copy comment** button.
 
+The report is a self-contained review dashboard with:
+
+- severity and verification summary cards
+- full-text search and severity filters
+- detailed changed behavior, trigger, evidence, impact, and suggested fix sections
+- paste-ready GitHub comments with one-click copy
+- verification and missing-test tables with status badges
+- dark and light themes, responsive mobile layout, and print-friendly styling
+
 To use a different centralized location, set this environment variable before starting VS Code:
 
 ```bash
