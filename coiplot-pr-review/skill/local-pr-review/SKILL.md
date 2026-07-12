@@ -53,7 +53,15 @@ On Windows run:
 & "<skill-root>/scripts/windows/collect-review-context.ps1" -BaseRef "<base-ref>"
 ```
 
-Read `.pr-review/context.json`, `.pr-review/changed-files.txt`, and `.pr-review/pr.diff`.
+Never create review artifacts inside the repository. Store all output below the centralized personal directory:
+
+```text
+~/Copilot-PR-Reviews/<repository>/<PR-number-or-branch>/<timestamp>/
+```
+
+When a PR number is available, pass `--review-key "PR-<number>"` on macOS/Linux or `-ReviewKey "PR-<number>"` on Windows. Otherwise let the collector use the current branch name. The user may override the root with `COPILOT_PR_REVIEW_OUTPUT_ROOT`.
+
+Capture the `REPORT_DIRECTORY=...` value printed by the collector as `<report-dir>`. Read `<report-dir>/context.json`, `<report-dir>/changed-files.txt`, and `<report-dir>/pr.diff`.
 
 If PR metadata is available, read its title, description, linked issue, acceptance criteria, and relevant design documents. Otherwise state that intent was inferred from the diff and repository context.
 
@@ -71,7 +79,7 @@ Record each check as `passed`, `failed`, `not_run`, or `unavailable`. Never impl
 
 ## Produce and validate the report
 
-For a full review, create `.pr-review/findings.json` conforming to [references/findings.schema.json](references/findings.schema.json).
+For a full review, create `<report-dir>/findings.json` conforming to [references/findings.schema.json](references/findings.schema.json).
 
 Every finding must point to an added or modified line. Populate `reviewComment` with self-contained Markdown ready to paste directly into the GitHub PR. Do not include severity, confidence, finding IDs, AI references, or report terminology inside that comment.
 
@@ -85,13 +93,13 @@ Set the recommendation deterministically:
 On macOS/Linux validate and render with:
 
 ```bash
-python3 "<skill-root>/scripts/macos/validate-and-render.py" --input .pr-review/findings.json --context .pr-review/context.json --output .pr-review/report.html
+python3 "<skill-root>/scripts/macos/validate-and-render.py" --input "<report-dir>/findings.json" --context "<report-dir>/context.json" --output "<report-dir>/report.html"
 ```
 
 On Windows validate and render with:
 
 ```powershell
-& "<skill-root>/scripts/windows/validate-and-render.ps1" -InputPath .pr-review/findings.json -ContextPath .pr-review/context.json -OutputPath .pr-review/report.html
+& "<skill-root>/scripts/windows/validate-and-render.ps1" -InputPath "<report-dir>/findings.json" -ContextPath "<report-dir>/context.json" -OutputPath "<report-dir>/report.html"
 ```
 
 Fix report data or locations until validation passes. Never weaken validation or invent a changed location.
@@ -105,6 +113,6 @@ Summarize:
 - checks actually run and their status
 - limitations
 - merge recommendation
-- path to `.pr-review/report.html` for full reviews
+- absolute path to `<report-dir>/report.html` for full reviews
 
 If no meaningful issue is found, say so explicitly without implying that unexecuted verification passed.

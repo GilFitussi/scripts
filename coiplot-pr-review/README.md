@@ -69,31 +69,31 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\platforms\windows\ins
 
 Reload VS Code and invoke `/local-pr-review` in Agent mode.
 
-## Generated output
+## Centralized output outside repositories
 
-The skill writes only below the currently reviewed repository's `.pr-review` directory:
+The skill never writes review artifacts into the repository. Reports are organized centrally by repository, PR or branch, and execution time:
 
 ```text
-.pr-review/
-├── context.json
-├── changed-files.txt
-├── pr.diff
-├── findings.json
-└── report.html
+~/Copilot-PR-Reviews/
+└── my-project/
+    └── PR-123/                  # Uses the branch name when no PR number is available
+        └── 2026-07-12_143500/
+            ├── context.json
+            ├── changed-files.txt
+            ├── pr.diff
+            ├── findings.json
+            └── report.html
 ```
 
 Each finding contains a `reviewComment` field with standalone Markdown ready to paste directly into a GitHub Pull Request. The HTML report includes a **Copy comment** button.
 
-## Ignore generated reports globally
-
-For personal use on macOS, configure a global ignore once:
+To use a different centralized location, set this environment variable before starting VS Code:
 
 ```bash
-git config --global core.excludesFile "$HOME/.gitignore_global"
-grep -qxF '.pr-review/' "$HOME/.gitignore_global" 2>/dev/null || echo '.pr-review/' >> "$HOME/.gitignore_global"
+export COPILOT_PR_REVIEW_OUTPUT_ROOT="$HOME/Documents/PR-Reviews"
 ```
 
-This avoids modifying `.gitignore` in every repository.
+Because the files are outside the repository, they never appear in `git status` and no `.gitignore` entry is required.
 
 ## Update
 
@@ -120,5 +120,5 @@ Reload VS Code after uninstalling.
 - The renderer rejects findings that are not anchored to an added or modified line.
 - Commands that were not executed are recorded as `not_run`, never `passed`.
 - Working-tree changes are reported separately from committed PR changes.
-- The skill does not edit application code unless the user explicitly requests fixes after the review.
+- The skill does not write any artifact inside the repository and does not edit application code unless the user explicitly requests fixes after the review.
 - AI review supplements CI, automated tests, security tools, and human review; it does not replace them.
