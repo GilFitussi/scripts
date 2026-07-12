@@ -6,6 +6,16 @@ This package adds reusable local pull request reviews to GitHub Copilot Chat in 
 
 Copy the package's `.github` directory into the root of the target Git repository. Merge it with an existing `.github` directory; do not replace unrelated workflows or configuration.
 
+Next, copy exactly one platform script directory into `<repository>/.github/pr-review/scripts`:
+
+```text
+# macOS
+platforms/macos/scripts -> <repository>/.github/pr-review/scripts
+
+# Windows
+platforms/windows/scripts -> <repository>/.github/pr-review/scripts
+```
+
 The resulting paths must be:
 
 ```text
@@ -16,8 +26,7 @@ The resulting paths must be:
 <repository>/.github/prompts/quick-local-pr-review.prompt.md
 <repository>/.github/prompts/security-local-pr-review.prompt.md
 <repository>/.github/pr-review/schema/findings.schema.json
-<repository>/.github/pr-review/scripts/collect-review-context.ps1
-<repository>/.github/pr-review/scripts/validate-and-render.ps1
+<repository>/.github/pr-review/scripts/<platform-specific scripts>
 ```
 
 Append the line from `.gitignore.snippet` to the target repository's `.gitignore` so generated reports are not committed.
@@ -56,12 +65,12 @@ The complete prompt reviews committed branch changes only. It reports staged, un
 - `node-typescript-review.instructions.md`: Node.js, JavaScript, TypeScript, and asynchronous test checks.
 - `data-workers-infra-review.instructions.md`: database, worker, queue, deployment, and secrets checks.
 - `full-local-pr-review.prompt.md`: complete end-to-end workflow, including checks, JSON, validation, and HTML.
-- `collect-review-context.ps1`: deterministically resolves the merge base and captures the committed diff and working-tree state.
+- `collect-review-context.sh` or `collect-review-context.ps1`: deterministically resolves the merge base and captures the committed diff and working-tree state.
 - `findings.schema.json`: output contract Copilot follows.
-- `validate-and-render.ps1`: rejects findings not anchored to an added/modified diff line and creates the HTML report.
+- `validate-and-render.py` or `validate-and-render.ps1`: rejects findings not anchored to an added/modified diff line and creates the HTML report.
 
 ## Notes
 
-- The scripts require PowerShell and Git. On Windows, run them in PowerShell. On macOS/Linux, install PowerShell 7 (`pwsh`) or replace the scripts with equivalents for your shell.
+- The macOS scripts require Bash, Python 3, and Git. The Windows scripts require PowerShell and Git.
 - The HTML is local and self-contained; it does not upload source or findings.
 - AI review is non-deterministic. Treat it as an additional reviewer, not a replacement for tests, CI, security tooling, or human approval.

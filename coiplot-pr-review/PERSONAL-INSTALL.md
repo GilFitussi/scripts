@@ -18,11 +18,11 @@ Nothing is copied into repositories that you review.
 
 ## Step 1: Install the shared tools once
 
-Open Terminal in this package directory and run:
+Open Terminal in this package directory and run the installer from the dedicated macOS folder:
 
 ```bash
-chmod +x ./install-personal.sh
-./install-personal.sh
+chmod +x ./platforms/macos/install-personal.sh
+./platforms/macos/install-personal.sh
 ```
 
 The script copies only the reusable scripts and JSON schema to:
@@ -30,9 +30,7 @@ The script copies only the reusable scripts and JSON schema to:
 ```text
 ~/.copilot/pr-review/
 ├── scripts\
-│   ├── collect-review-context.ps1
 │   ├── collect-review-context.sh
-│   ├── validate-and-render.ps1
 │   └── validate-and-render.py
 └── schema\
     └── findings.schema.json
@@ -143,7 +141,7 @@ This keeps `.pr-review/` ignored in every repository for your user only. It does
 After pulling a newer version of this package, rerun:
 
 ```bash
-./install-personal.sh
+./platforms/macos/install-personal.sh
 ```
 
 The prompt and instruction files are read directly from this package, so VS Code sees their updates after a window reload. Rerunning the installer refreshes the copied scripts and schema.

@@ -16,9 +16,32 @@ A reusable GitHub Copilot customization pack for high-signal local pull request 
 
 - Visual Studio Code with GitHub Copilot and GitHub Copilot Chat.
 - Git available from the terminal.
-- PowerShell 5.1 or PowerShell 7 for the bundled scripts.
+- On macOS: Bash and Python 3. On Windows: PowerShell 5.1 or PowerShell 7.
 - A trusted VS Code workspace so Agent mode can execute approved terminal commands.
 - Optional: GitHub Pull Requests and Issues extension for PR title, description, and base-branch context.
+
+## Package layout
+
+```text
+coiplot-pr-review/
+├── .github/                  # Shared Copilot prompts, instructions, and JSON schema
+├── platforms/
+│   ├── macos/               # Everything platform-specific for Mac
+│   │   ├── install-personal.sh
+│   │   └── scripts/
+│   │       ├── collect-review-context.sh
+│   │       └── validate-and-render.py
+│   └── windows/             # Everything platform-specific for Windows
+│       ├── install-personal.ps1
+│       └── scripts/
+│           ├── collect-review-context.ps1
+│           └── validate-and-render.ps1
+├── PERSONAL-INSTALL.md      # Detailed personal macOS setup
+├── INSTALL.md               # Repository/team installation
+└── README.md
+```
+
+The review rules and prompts are shared. Choose only the platform folder matching your computer. A Mac user can ignore `platforms/windows`, and a Windows user can ignore `platforms/macos`.
 
 ## Installation
 
@@ -30,8 +53,8 @@ Keep this package in a stable location on your Mac, then open Terminal in the pa
 
 ```bash
 cd /path/to/scripts/coiplot-pr-review
-chmod +x ./install-personal.sh
-./install-personal.sh
+chmod +x ./platforms/macos/install-personal.sh
+./platforms/macos/install-personal.sh
 ```
 
 The installer copies the shared shell, Python, and schema files to:
@@ -44,7 +67,7 @@ It then prints the exact entries to add to your VS Code User Settings. In VS Cod
 
 1. Press `Cmd+Shift+P`.
 2. Run `Preferences: Open User Settings (JSON)`.
-3. Add the paths printed by `install-personal.sh`.
+3. Add the paths printed by the macOS installer.
 
 They will look similar to:
 
@@ -78,7 +101,7 @@ You can now open any repository in VS Code, select Copilot **Agent** mode, and r
 
 Replace `origin/main` when the repository uses a different base branch. The report is generated inside the currently opened repository at `.pr-review/report.html`, but no customization files are copied into that repository.
 
-After updating this package, rerun `./install-personal.sh` to refresh the shared tools, then reload VS Code. For troubleshooting and uninstall instructions, see [PERSONAL-INSTALL.md](PERSONAL-INSTALL.md).
+After updating this package, rerun `./platforms/macos/install-personal.sh` to refresh the shared tools, then reload VS Code. For troubleshooting and uninstall instructions, see [PERSONAL-INSTALL.md](PERSONAL-INSTALL.md).
 
 ### Repository installation — share with a team
 
@@ -91,6 +114,16 @@ coiplot-pr-review/.github  ->  your-repository/.github
 ```
 
 If the target repository already has a `.github` directory, merge the directories. Do not delete or replace existing GitHub Actions workflows or repository configuration.
+
+Then copy the scripts for the operating system used by the reviewer:
+
+```text
+# macOS
+coiplot-pr-review/platforms/macos/scripts  ->  your-repository/.github/pr-review/scripts
+
+# Windows
+coiplot-pr-review/platforms/windows/scripts  ->  your-repository/.github/pr-review/scripts
+```
 
 After installation, these files should exist:
 
@@ -108,9 +141,7 @@ your-repository/
     └── pr-review/
         ├── schema/
         │   └── findings.schema.json
-        └── scripts/
-            ├── collect-review-context.ps1
-            └── validate-and-render.ps1
+        └── scripts/        # Copy either the macOS or Windows scripts here
 ```
 
 #### 2. Ignore generated reports
