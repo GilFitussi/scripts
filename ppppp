@@ -1,0 +1,17 @@
+Package the existing local Node.js web application for macOS without Electron or Docker.
+
+Requirements:
+
+- Use Node.js Single Executable Applications (SEA) to create a standalone backend executable.
+- Do not require Node.js, npm, or Docker on the target Mac.
+- Keep frontend and backend source-code changes minimal.
+- Build the frontend for production and bundle its generated files with the application.
+- Start the backend automatically on "127.0.0.1" only.
+- Open the application URL automatically in the user’s default browser.
+- Wrap the executable inside a standard macOS ".app" bundle so users can launch it by double-clicking in Finder.
+- Stop the backend cleanly when the application exits.
+- Support both Apple Silicon ("arm64") and Intel ("x64") builds.
+- Add build scripts and document the complete packaging process.
+- Do not add analytics, auto-updates, remote URLs, or external network dependencies.
+- Produce distributable ZIP files for each architecture.
+- Clearly document any limitations involving macOS Gatekeeper, code signing, and notarization.
