@@ -1,19 +1,12 @@
-Agenda should be managed as a centralized, explicitly initialized instance per process.
-
-Best practice:
-
-1. Do not create a new Agenda instance every time you need to enqueue a job.
-2. Create the Agenda instance once during application startup.
-3. Initialize Agenda only after the MongoDB connection is ready.
-4. Keep the Agenda instance in a central manager module.
-5. Expose simple functions such as "initAgenda", "getAgenda", and "stopAgenda".
-6. "initAgenda" should only create and store the Agenda instance. It should not start processing jobs automatically.
-7. "getAgenda" should return the existing initialized instance so services can reuse it.
-8. Job enqueueing should go through small wrapper functions, so business services do not use Agenda directly everywhere.
-9. "agenda.start()" should be called only by the process that is responsible for executing jobs.
-10. Job definitions should be registered only in the process that actually runs jobs.
-11. On shutdown, stop Agenda gracefully to avoid leaving jobs locked.
-
-In short:
-
-Manage Agenda as a controlled singleton per process: initialize it once, reuse it through a getter or wrapper, and start it only in the worker process.
+max_over_time(
+  (
+    sum by (pod) (
+      rate(container_cpu_usage_seconds_total{
+        namespace=~"$namespace",
+        pod=~"$pod",
+        container!="",
+        image!=""
+      }[30s])
+    ) * 1000
+  )[5m:]
+)
