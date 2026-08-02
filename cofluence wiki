@@ -1,256 +1,101 @@
-Confluence Wiki Markup Writing Guide for AI Agents
+Confluence Wiki Markup Instructions
 
-1. Purpose
+When generating documentation for this task, output the result in Confluence Wiki Markup, not Markdown, HTML, Confluence Storage Format or Atlassian Document Format.
 
-Use this guide whenever you are asked to generate content in Confluence Wiki Markup format.
+The output must be ready to paste into a system that supports Confluence Wiki Markup.
 
-Your output must be ready to paste into a system that accepts Confluence Wiki Markup.
+Output Rules
 
-Do not output Markdown unless the user explicitly requests Markdown.
+1. Return only the requested documentation.
+2. Do not wrap the complete result in triple backticks.
+3. Do not add explanations before or after the documentation.
+4. Do not mix Markdown syntax with Confluence Wiki Markup.
+5. Preserve all technical details supplied by the user.
+6. Do not invent names, URLs, owners, environments, commands or requirements.
+7. Use clear placeholders when information is missing.
+8. Make sure every opened macro is properly closed.
+9. Keep the document structured, concise and easy to scan.
+10. Use consistent terminology throughout the document.
 
-Do not wrap the final output in a Markdown code fence unless the user explicitly asks for a code block.
+Headings
 
----
-
-2. Important Compatibility Note
-
-Confluence Wiki Markup is primarily supported by:
-
-- Confluence Legacy Editor
-- Some Confluence macros
-- Some administration fields
-- Jira or Confluence integrations that explicitly accept Wiki Markup
-- APIs or automation tools that expect Wiki Markup
-
-The modern Confluence Cloud editor may not accept raw Wiki Markup directly.
-
-Before generating content, determine which format the target system expects:
-
-- Confluence Wiki Markup
-- Confluence Storage Format
-- Markdown
-- HTML
-- Atlassian Document Format, also called ADF
-
-When the user explicitly requests Confluence Wiki Format, use the syntax described in this document.
-
----
-
-3. General Output Rules
-
-When generating Confluence Wiki Markup:
-
-1. Use "h1.", "h2.", "h3." and similar syntax for headings.
-2. Use "*text*" for bold text.
-3. Use "_text_" for italic text.
-4. Use "{{text}}" for inline code.
-5. Use "{code}" for code blocks.
-6. Use "||" for table header cells.
-7. Use "|" for normal table cells.
-8. Use "*" for unordered lists.
-9. Use "#" for ordered lists.
-10. Use Confluence-style links such as "[label|URL]".
-11. Use macros only when they are supported by the target Confluence installation.
-12. Keep spacing consistent.
-13. Add blank lines between major sections.
-14. Avoid mixing Markdown syntax with Confluence Wiki Markup.
-15. Return only valid Confluence Wiki Markup when the user asks for paste-ready output.
-
----
-
-4. Headings
-
-Use the following syntax:
+Use Confluence heading syntax:
 
 {noformat}
-h1. Main Heading
+h1. Page Title
 
-h2. Section Heading
+h2. Main Section
 
-h3. Subsection Heading
+h3. Subsection
 
-h4. Smaller Heading
-
-h5. Minor Heading
-
-h6. Smallest Heading
+h4. Smaller Subsection
 {noformat}
 
-Example:
+Rules:
 
-{noformat}
-h1. Deployment Guide
+* Use one {{h1.}} heading for the page title.
+* Use {{h2.}} for major sections.
+* Use {{h3.}} for subsections.
+* Do not use Markdown headings such as {{# Title}} or {{## Section}}.
+* Do not skip heading levels unless necessary.
 
-h2. Prerequisites
+Text Formatting
 
-h3. Required Permissions
-{noformat}
-
-Heading Rules
-
-- Use only one "h1." heading for the page title when a page title is required.
-- Use "h2." for major sections.
-- Use "h3." for subsections.
-- Do not skip heading levels without a reason.
-- Add one space after the heading marker.
-
-Correct:
-
-{noformat}
-h2. Installation
-{noformat}
-
-Incorrect:
-
-{noformat}
-h2.Installation
-
-Installation
-
-Installation
-{noformat}
-
----
-
-5. Text Formatting
-
-Bold
-
-Syntax:
+Use:
 
 {noformat}
 bold text
-{noformat}
-
-Example:
-
-{noformat}
-Important: Do not deploy directly to production.
-{noformat}
-
-Italic
-
-Syntax:
-
-{noformat}
 italic text
-{noformat}
-
-Example:
-
-{noformat}
-This step is optional.
-{noformat}
-
-Bold and Italic
-
-Syntax:
-
-{noformat}
-bold and italic text
-{noformat}
-
-Use this combination sparingly.
-
-Strikethrough
-
-Syntax:
-
-{noformat}
+{{inline code}}
 -deleted text-
-{noformat}
-
-Example:
-
-{noformat}
-The old endpoint is -no longer supported-.
-{noformat}
-
-Underline
-
-Syntax:
-
-{noformat}
 +underlined text+
 {noformat}
 
-Example:
+Examples:
 
 {noformat}
-+Required field+
-{noformat}
+Status: In Progress
 
-Monospace or Inline Code
+Run {{npm install}} before starting the application.
 
-Syntax:
-
-{noformat}
-{{inline code}}
-{noformat}
-
-Example:
-
-{noformat}
-Run the {{npm install}} command.
+This step is optional.
 {noformat}
 
 Use inline code for:
 
-- Commands
-- File names
-- Variable names
-- Class names
-- Function names
-- API paths
-- Configuration keys
-- Short code expressions
+* Commands
+* File names
+* Variables
+* Function names
+* Class names
+* Configuration keys
+* API paths
+* Status codes
+* Short code expressions
 
----
-
-6. Paragraphs and Line Breaks
+Paragraphs
 
 Separate paragraphs with a blank line.
 
-Example:
-
-{noformat}
-This is the first paragraph.
-
-This is the second paragraph.
-{noformat}
-
-To force a line break without creating a new paragraph, use:
+Use forced line breaks only when necessary:
 
 {noformat}
 First line\
 Second line
 {noformat}
 
-Do not overuse forced line breaks.
+Unordered Lists
 
-Prefer normal paragraphs and lists when possible.
-
----
-
-7. Unordered Lists
-
-Use an asterisk followed by a space.
-
-Example:
+Use one or more asterisks:
 
 {noformat}
 
-* Backend application
-* Frontend application
-* PostgreSQL database
-* Authentication service
+* Backend
+* Frontend
+* Database
   {noformat}
 
-Nested Unordered Lists
-
-Add additional asterisks for nested levels.
-
-Example:
+Nested list:
 
 {noformat}
 
@@ -263,37 +108,23 @@ Example:
   ** Admin application
   {noformat}
 
-Rules:
+Ordered Lists
 
-- Use one "*" for level one.
-- Use two "**" for level two.
-- Use three "***" for level three.
-- Avoid deeply nested lists.
-- Prefer no more than three levels.
-
----
-
-8. Ordered Lists
-
-Use a hash symbol followed by a space.
-
-Example:
+Use one or more hash symbols:
 
 {noformat}
 
 Install the dependencies.
 
-Configure the environment variables.
-
-Start the application.
+Configure the application.
 
 Run the tests.
 
+Start the service.
+
 {noformat}
 
-Nested Ordered Lists
-
-Example:
+Nested ordered list:
 
 {noformat}
 
@@ -305,25 +136,17 @@ Create a feature branch.
 
 Implement the change.
 
-Update the source code.
+Update the code.
 
 Add tests.
 
-Open a pull request.
-
 {noformat}
 
----
-
-9. Mixed Lists
-
-You can combine ordered and unordered lists.
+Mixed Lists
 
 Example:
 
 {noformat}
-
-Prepare the environment.
 
 Install the required software:
 
@@ -333,129 +156,61 @@ Install the required software:
 
 Configure the project.
 
-{noformat}
-
-Another example:
+Run the tests.
 
 {noformat}
 
-* Supported environments:
-  ** Development
-  ** Testing
-  ** Production
-* Deployment process:
-  *# Build the application.
-  *# Run tests.
-  *# Deploy the artifact.
-  {noformat}
+Avoid nesting lists deeper than three levels.
 
-Use mixed lists only when they make the structure clearer.
+Links
 
----
-
-10. Links
-
-External Link
-
-Syntax:
+External link:
 
 {noformat}
-[Link text|https://example.com]
+[Documentation|https://example.com]
 {noformat}
 
-Example:
+Confluence page:
 
 {noformat}
-See the [official documentation|https://example.com/docs].
+[Deployment Guide]
 {noformat}
 
-URL Without a Custom Label
-
-Syntax:
+Page in another space:
 
 {noformat}
-[https://example.com]
+[ARCH:Architecture Guidelines]
 {noformat}
 
-Prefer labeled links when possible.
-
-Link to Another Confluence Page
-
-Syntax:
+Link to a heading:
 
 {noformat}
-[Page Name]
+[Deployment Guide#Rollback Procedure]
 {noformat}
 
-Example:
+Custom label:
 
 {noformat}
-See [Deployment Standards].
+[Read the rollback instructions|Deployment Guide#Rollback Procedure]
 {noformat}
 
-Link to a Page in Another Space
-
-Syntax:
-
-{noformat}
-[SPACEKEY:Page Name]
-{noformat}
-
-Example:
-
-{noformat}
-See [ARCH:Architecture Guidelines].
-{noformat}
-
-Link to a Heading on a Page
-
-Syntax:
-
-{noformat}
-[Page Name#Heading Name]
-{noformat}
-
-Example:
-
-{noformat}
-See [Deployment Guide#Rollback Procedure].
-{noformat}
-
-Link With Custom Text to a Confluence Page
-
-Syntax:
-
-{noformat}
-[Custom label|Page Name]
-{noformat}
-
-Example:
-
-{noformat}
-Read the [rollback instructions|Deployment Guide#Rollback Procedure].
-{noformat}
-
-Email Link
-
-Syntax:
-
-{noformat}
-[mailto:team@example.com]
-{noformat}
-
-Or:
+Email:
 
 {noformat}
 [Contact the team|mailto:team@example.com]
 {noformat}
 
----
+Do not use Markdown links such as:
 
-11. Tables
+{noformat}
+"Documentation" (https://example.com)
+{noformat}
 
-Basic Table
+Do not invent links.
 
-Use double pipes for header cells and single pipes for normal cells.
+Tables
+
+Use double pipes for headers and single pipes for normal cells.
 
 Example:
 
@@ -463,64 +218,34 @@ Example:
 || Field || Required || Description ||
 | Name | Yes | Name of the service |
 | Owner | Yes | Team responsible for the service |
-| Repository | Yes | Git repository URL |
+| Repository | Yes | Source repository |
 | Notes | No | Additional information |
 {noformat}
 
-Table Rules
+Rules:
 
-- Every row must start and end with "|".
-- Header cells use "||".
-- Normal cells use "|".
-- Keep the number of cells consistent across rows.
-- Keep cell content concise.
-- Avoid very large paragraphs inside tables.
-- Use a list instead of a table when the information does not require comparison.
+* Every row must start and end with a pipe.
+* Use {{||}} for header cells.
+* Use {{|}} for regular cells.
+* Keep the same number of cells in every row.
+* Keep table content concise.
+* Use tables only for structured information or comparisons.
+* Do not use Markdown separator rows such as {{| --- | --- |}}.
 
-Correct:
-
-{noformat}
-|| Environment || URL || Deployment Method ||
-| Development | {{https://dev.example.com}} | Automatic |
-| Testing | {{https://test.example.com}} | Automatic |
-| Production | {{https://example.com}} | Manual approval |
-{noformat}
-
-Incorrect:
+Example API table:
 
 {noformat}
-| Environment | URL
-Development | example.com
+|| Method || Path || Description ||
+| {{GET}} | {{/api/items}} | Returns all items |
+| {{POST}} | {{/api/items}} | Creates an item |
+| {{DELETE}} | {{/api/items/{id}}} | Deletes an item |
 {noformat}
 
-Lists Inside Tables
+Code Blocks
 
-For simple lists inside a table cell, keep the list on the same logical row.
+Use the Confluence {{code}} macro.
 
-Example:
-
-{noformat}
-|| Component || Responsibilities ||
-| API | * Request validation
-
-* Business logic
-* Database access |
-  | Worker | * Message processing
-* Retry handling
-* Status updates |
-  {noformat}
-
-Be aware that support for complex formatting inside table cells may vary.
-
-For maximum compatibility, use short text or "<br>" only when the target system supports it.
-
----
-
-12. Code Blocks
-
-Use the "{code}" macro.
-
-Basic Code Block
+Basic example:
 
 {noformat}
 {code}
@@ -529,7 +254,7 @@ console.log(message);
 {code}
 {noformat}
 
-Code Block With Language
+With a language:
 
 {noformat}
 {code:language=javascript}
@@ -538,7 +263,7 @@ console.log(message);
 {code}
 {noformat}
 
-Code Block With Title
+With a title:
 
 {noformat}
 {code:language=javascript|title=server.js}
@@ -549,7 +274,7 @@ app.listen(3000);
 {code}
 {noformat}
 
-Code Block With Line Numbers
+With line numbers:
 
 {noformat}
 {code:language=javascript|linenumbers=true}
@@ -559,41 +284,29 @@ return a + b;
 {code}
 {noformat}
 
-Recommended Language Names
+Common language identifiers include:
 
-Use common identifiers such as:
+* {{javascript}}
+* {{typescript}}
+* {{java}}
+* {{python}}
+* {{bash}}
+* {{shell}}
+* {{sql}}
+* {{json}}
+* {{yaml}}
+* {{xml}}
+* {{html}}
+* {{css}}
+* {{text}}
 
-- "javascript"
-- "typescript"
-- "java"
-- "python"
-- "bash"
-- "shell"
-- "sql"
-- "json"
-- "yaml"
-- "xml"
-- "html"
-- "css"
-- "docker"
-- "text"
+Do not use Markdown triple-backtick code fences.
 
-If syntax highlighting is uncertain, omit the language parameter.
+Preserve the original indentation inside code blocks.
 
-Code Block Rules
+No-Format Blocks
 
-- Do not use Markdown triple backticks.
-- Do not apply bold or italic formatting inside a code block.
-- Preserve indentation.
-- Do not escape code unless required.
-- Use inline code for short commands.
-- Use a code block for multiline commands or source code.
-
----
-
-13. No-Format Blocks
-
-Use "{noformat}" when text must appear exactly as written but does not require syntax highlighting.
+Use {{noformat}} for output that should be displayed exactly as written without syntax highlighting.
 
 Example:
 
@@ -605,87 +318,38 @@ LOG_LEVEL=info
 {noformat}
 {noformat}
 
-Use "{noformat}" for:
+Use no-format blocks for:
 
-- Plain configuration examples
-- Log output
-- Directory trees
-- Console output
-- Text templates
-- Content containing many Wiki Markup characters
+* Directory trees
+* Log output
+* Console output
+* Plain configuration
+* Templates
+* Text containing many markup characters
 
-Example directory tree:
+Quotes
 
-{noformat}
-{noformat}
-project/
-├── apps/
-│   ├── api/
-│   └── web/
-├── packages/
-└── package.json
-{noformat}
-{noformat}
-
----
-
-14. Quotes
-
-Use "bq." for a block quote.
-
-Example:
+Single paragraph:
 
 {noformat}
-bq. All production changes must be reviewed before deployment.
+bq. All production changes must be reviewed.
 {noformat}
 
-For multiple quoted paragraphs, use the quote macro:
+Multiple paragraphs:
 
 {noformat}
 {quote}
-The first quoted paragraph.
+First quoted paragraph.
 
-The second quoted paragraph.
+Second quoted paragraph.
 {quote}
 {noformat}
 
-Use quotes only for actual quotations, policies or highlighted statements.
+Information Panels
 
----
+Use panels only for meaningful information.
 
-15. Horizontal Rules
-
-Use four hyphens:
-
-{noformat}
-
-{noformat}
-
-Example:
-
-{noformat}
-h2. Current Design
-
-Content describing the current design.
-
----
-
-h2. Proposed Design
-
-Content describing the proposed design.
-{noformat}
-
-Use horizontal rules sparingly.
-
-Headings and whitespace are usually preferable.
-
----
-
-16. Information Panels
-
-Confluence commonly supports panel macros for highlighted information.
-
-Info Panel
+Info:
 
 {noformat}
 {info}
@@ -693,23 +357,15 @@ This process applies only to production deployments.
 {info}
 {noformat}
 
-Warning Panel
-
-{noformat}
-{warning}
-Do not delete the production database.
-{warning}
-{noformat}
-
-Note Panel
+Note:
 
 {noformat}
 {note}
-The first deployment may take several minutes.
+The initial deployment may take several minutes.
 {note}
 {noformat}
 
-Tip Panel
+Tip:
 
 {noformat}
 {tip}
@@ -717,156 +373,83 @@ Run the tests locally before opening a pull request.
 {tip}
 {noformat}
 
-Custom Panel
+Warning:
 
 {noformat}
-{panel:title=Important Information}
-This is the panel content.
+{warning}
+Do not delete production data.
+{warning}
+{noformat}
+
+Custom panel:
+
+{noformat}
+{panel:title=Important}
+Panel content.
 {panel}
 {noformat}
 
-Depending on the target Confluence version, supported panel macros may vary.
-
-When compatibility is uncertain, use a bold label instead:
+When macro compatibility is uncertain, use a bold label instead:
 
 {noformat}
-Warning: Do not deploy this change before the database migration is complete.
+Warning: Do not deploy before the migration is complete.
 {noformat}
 
----
+Expandable Sections
 
-17. Expandable Sections
-
-When supported, use the expand macro.
-
-Example:
+When supported:
 
 {noformat}
 {expand:title=View implementation details}
-The implementation uses a background worker and a MongoDB-backed queue.
+Detailed implementation information.
 {expand}
 {noformat}
 
-Use expandable sections for:
+Use expandable sections for optional or lengthy information.
 
-- Long technical details
-- Troubleshooting information
-- Large examples
-- Optional background information
-- Logs
-- Secondary explanations
+Do not place critical instructions only inside an expandable section.
 
-Do not hide critical instructions inside an expandable section.
+Table of Contents
 
----
-
-18. Table of Contents
-
-Use the table of contents macro:
-
-{noformat}
-{toc}
-{noformat}
-
-Example:
-
-{noformat}
-h1. Service Deployment Guide
-
-{toc}
-
-h2. Overview
-
-h2. Prerequisites
-
-h2. Deployment
-
-h2. Verification
-
-h2. Rollback
-{noformat}
-
-Optional parameters may be added:
+For long pages:
 
 {noformat}
 {toc:minLevel=2|maxLevel=3}
 {noformat}
 
-Use a table of contents for long pages with several sections.
+Do not add a table of contents to a short document.
 
-Do not add one to very short pages.
+Horizontal Rule
 
----
-
-19. Status and Labels
-
-Some Confluence environments support status macros.
-
-Example:
+Use:
 
 {noformat}
-{status:colour=Green|title=COMPLETED}
-{noformat}
-
-Other examples:
 
 {noformat}
-{status:colour=Yellow|title=IN PROGRESS}
 
-{status:colour=Red|title=BLOCKED}
+Use horizontal rules sparingly.
 
-{status:colour=Blue|title=PLANNED}
-{noformat}
+Attachments and Images
 
-Macro parameters can vary between Confluence versions.
-
-When exact compatibility is unknown, use plain text:
-
-{noformat}
-Status: In Progress
-{noformat}
-
----
-
-20. Images and Attachments
-
-Attached Image
-
-Syntax:
+Attached image:
 
 {noformat}
 !architecture.png!
 {noformat}
 
-Image With Size
-
-Example:
+Image with a width:
 
 {noformat}
 !architecture.png|width=800!
 {noformat}
 
-External Image
-
-Example:
-
-{noformat}
-!https://example.com/image.png!
-{noformat}
-
-External image support may be restricted by security settings.
-
-Link to an Attachment
-
-Example:
+Attachment link:
 
 {noformat}
 [^deployment-guide.pdf]
 {noformat}
 
-Link With Custom Text
-
-Example:
+Custom attachment label:
 
 {noformat}
 [Download the deployment guide^deployment-guide.pdf]
@@ -874,53 +457,113 @@ Example:
 
 Do not invent attachment names.
 
-Only reference an attachment when its name is known.
+Special Characters
 
----
+Wiki Markup may interpret characters such as:
 
-21. Escaping Special Characters
+{noformat}
 
-Confluence Wiki Markup uses characters such as:
+* _ - + { } [ ] | #
+  {noformat}
 
-- "*"
-- "_"
-- "-"
-- "+"
-- "{"
-- "}"
-- "["
-- "]"
-- "|"
-- "#"
-
-When text containing these characters is incorrectly interpreted as formatting, use one of these approaches:
-
-1. Wrap short technical text in inline code:
+For technical values, prefer inline code:
 
 {noformat}
 {{value_with_underscores}}
 {noformat}
 
-2. Put multiline technical text inside "{noformat}" or "{code}".
+For multiline technical text, use a {{code}} or {{noformat}} block.
 
-3. Escape the character with a backslash when supported:
+Writing Style
+
+The documentation must be:
+
+* Clear
+* Direct
+* Technically accurate
+* Well structured
+* Easy to scan
+* Consistent
+* Suitable for technical readers
+
+Use short paragraphs.
+
+Use imperative language for procedures:
+
+* Configure the environment.
+* Run the tests.
+* Verify the deployment.
+* Review the logs.
+
+Use descriptive headings.
+
+Prefer:
 
 {noformat}
-*not bold*
+h2. Configure Database Credentials
 {noformat}
 
-For technical content, inline code or no-format blocks are usually safer than manual escaping.
+Instead of:
 
----
+{noformat}
+h2. Configuration
+{noformat}
 
-22. Recommended Page Structure
+Avoid:
 
-Use the following structure for most technical documentation pages:
+* Unnecessary introductions
+* Repeated information
+* Very long paragraphs
+* Excessive formatting
+* Deeply nested lists
+* Huge tables
+* Unsupported macros
+* Vague instructions
+
+Define uncommon abbreviations the first time they appear.
+
+Placeholders
+
+When information is missing, use explicit placeholders:
+
+{noformat}
+[Service Name]
+[Team Name]
+[Repository URL]
+[Environment Name]
+[Insert deployment command]
+[Decision Owner]
+YYYY-MM-DD
+{noformat}
+
+You may also use:
+
+{noformat}
+TODO: Add the production dashboard URL.
+{noformat}
+
+Never invent:
+
+* Team names
+* Owners
+* URLs
+* Credentials
+* Repository names
+* Environment names
+* Version numbers
+* Dates
+* API paths
+* Commands
+* Requirements
+
+Recommended Technical Document Structure
+
+Use this structure when appropriate:
 
 {noformat}
 h1. Page Title
 
-One or two sentences explaining the purpose of the page.
+Briefly explain the purpose of the page.
 
 {toc:minLevel=2|maxLevel=3}
 
@@ -932,7 +575,6 @@ h2. Goals
 
 * Goal one
 * Goal two
-* Goal three
 
 h2. Non-Goals
 
@@ -942,13 +584,13 @@ h2. Non-Goals
 h2. Prerequisites
 
 || Requirement || Description ||
-| Access | Required repository and environment permissions |
+| Access | Required permissions |
 | Software | Required tools and versions |
 | Configuration | Required environment variables |
 
 h2. Architecture
 
-Describe the main components and interactions.
+Describe the components and interactions.
 
 h3. Components
 
@@ -962,13 +604,13 @@ The client sends a request.
 
 The API validates the request.
 
-The worker processes the operation.
+The service processes the operation.
 
 The database stores the result.
 
 h2. Implementation
 
-Explain the implementation details.
+Describe the implementation.
 
 h3. Configuration
 
@@ -978,19 +620,13 @@ name: example-service
 port: 3000
 {code}
 
-h3. API
-
-|| Method || Path || Description ||
-| GET | {{/api/items}} | Returns all items |
-| POST | {{/api/items}} | Creates an item |
-
 h2. Testing
 
 Run the unit tests.
 
 Run the integration tests.
 
-Verify the expected behavior manually.
+Verify the behavior manually.
 
 h2. Deployment
 
@@ -1009,7 +645,7 @@ Describe how to restore the previous version.
 h2. Risks
 
 || Risk || Impact || Mitigation ||
-| Deployment failure | High | Use automated rollback |
+| Deployment failure | High | Use an automated rollback |
 | Invalid configuration | Medium | Validate configuration before deployment |
 
 h2. Open Questions
@@ -1020,337 +656,28 @@ h2. Open Questions
 h2. References
 
 * [Related Page]
-* [External documentation|https://example.com]
+* [External Documentation|https://example.com]
   {noformat}
 
----
+Adapt the structure to the requested document. Do not include irrelevant or empty sections.
 
-23. Recommended Architecture Decision Record Format
+Common Mistakes
 
-Use this structure when creating an ADR:
-
-{noformat}
-h1. ADR-001: Decision Title
-
-Status: Proposed
-
-Date: YYYY-MM-DD
-
-Decision Owners: Team or owner name
-
-h2. Context
-
-Explain the problem, background and constraints.
-
-h2. Decision
-
-Describe the selected solution clearly.
-
-h2. Decision Drivers
-
-* Driver one
-* Driver two
-* Driver three
-
-h2. Considered Options
-
-h3. Option 1: Option Name
-
-Description of the option.
-
-Advantages:
-
-* Advantage one
-* Advantage two
-
-Disadvantages:
-
-* Disadvantage one
-* Disadvantage two
-
-h3. Option 2: Option Name
-
-Description of the option.
-
-Advantages:
-
-* Advantage one
-
-Disadvantages:
-
-* Disadvantage one
-
-h2. Consequences
-
-h3. Positive Consequences
-
-* Positive consequence one
-* Positive consequence two
-
-h3. Negative Consequences
-
-* Negative consequence one
-* Negative consequence two
-
-h2. Risks and Mitigations
-
-|| Risk || Probability || Impact || Mitigation ||
-| Risk description | Low, Medium or High | Low, Medium or High | Mitigation description |
-
-h2. Implementation Plan
-
-Implementation step one.
-
-Implementation step two.
-
-Implementation step three.
-
-h2. Validation
-
-Describe how the decision will be validated.
-
-h2. References
-
-* [Related document]
-* [External documentation|https://example.com]
-  {noformat}
-
----
-
-24. Recommended Runbook Format
-
-Use this structure for operational runbooks:
-
-{noformat}
-h1. Runbook: Service or Incident Name
-
-h2. Purpose
-
-Describe when this runbook should be used.
-
-h2. Symptoms
-
-* Symptom one
-* Symptom two
-* Alert name or error message
-
-h2. Impact
-
-Describe the user or system impact.
-
-h2. Prerequisites
-
-* Required permissions
-* Required tools
-* Required environment access
-
-h2. Diagnosis
-
-Check the service health.
-
-Review the application logs.
-
-Review the monitoring dashboard.
-
-Verify external dependencies.
-
-h3. Commands
-
-{code:language=bash}
-kubectl get pods -n example
-kubectl logs deployment/example-service -n example
-{code}
-
-h2. Resolution
-
-Perform the first recovery step.
-
-Verify the result.
-
-Continue to the next step if the issue remains.
-
-{warning}
-Do not restart all production instances at the same time.
-{warning}
-
-h2. Verification
-
-* Confirm that the health endpoint returns success.
-* Confirm that the error rate has returned to normal.
-* Confirm that requests are being processed.
-
-h2. Rollback
-
-Describe how to reverse the recovery action.
-
-h2. Escalation
-
-|| Condition || Escalation Target ||
-| Issue remains after recovery | Service owner |
-| Data corruption is suspected | Database team |
-| Security incident is suspected | Security team |
-
-h2. References
-
-* [Service Dashboard]
-* [Deployment Guide]
-* [Architecture Documentation]
-  {noformat}
-
----
-
-25. Recommended API Documentation Format
-
-{noformat}
-h1. API: Resource Name
-
-h2. Overview
-
-Describe the purpose of the API.
-
-h2. Base URL
-
-{{https://api.example.com/v1}}
-
-h2. Authentication
-
-Describe the authentication mechanism.
-
-h2. Endpoints
-
-h3. Get Items
-
-Method: {{GET}}
-
-Path: {{/items}}
-
-Description: Returns a collection of items.
-
-h4. Query Parameters
-
-|| Parameter || Type || Required || Description ||
-| {{limit}} | Number | No | Maximum number of returned records |
-| {{cursor}} | String | No | Pagination cursor |
-
-h4. Response
-
-{code:language=json}
-{
-"items": [],
-"nextCursor": null
-}
-{code}
-
-h4. Status Codes
-
-|| Status || Description ||
-| {{200}} | Request completed successfully |
-| {{400}} | Invalid request |
-| {{401}} | Authentication failed |
-| {{500}} | Internal server error |
-
-h3. Create Item
-
-Method: {{POST}}
-
-Path: {{/items}}
-
-h4. Request Body
-
-{code:language=json}
-{
-"name": "Example"
-}
-{code}
-
-h4. Response
-
-{code:language=json}
-{
-"id": "123",
-"name": "Example"
-}
-{code}
-{noformat}
-
----
-
-26. Writing Style Rules for the Agent
-
-The generated documentation must be:
-
-- Clear
-- Direct
-- Structured
-- Technically accurate
-- Easy to scan
-- Consistent in terminology
-- Suitable for engineers and technical stakeholders
-
-Use short paragraphs.
-
-Use lists for steps and collections.
-
-Use tables only for structured comparisons or field definitions.
-
-Use code blocks for commands and source code.
-
-Use warning panels only for genuine risks.
-
-Avoid unnecessary introductions.
-
-Avoid repeating the same information in multiple sections.
-
-Define uncommon abbreviations the first time they appear.
-
-Use imperative language for procedures:
-
-- Configure the environment.
-- Run the tests.
-- Verify the deployment.
-- Review the logs.
-
-Use descriptive headings:
-
-Good:
-
-{noformat}
-h2. Configure Database Credentials
-{noformat}
-
-Weak:
-
-{noformat}
-h2. Configuration
-{noformat}
-
----
-
-27. Common Mistakes to Avoid
-
-Do Not Use Markdown Headings
-
-Incorrect:
+Incorrect Markdown heading:
 
 {noformat}
 
 Installation
 
-Prerequisites
-
 {noformat}
 
 Correct:
 
 {noformat}
-h1. Installation
-
-h2. Prerequisites
+h2. Installation
 {noformat}
 
-Do Not Use Markdown Bold
-
-Incorrect:
+Incorrect Markdown bold:
 
 {noformat}
 Important
@@ -1362,9 +689,7 @@ Correct:
 Important
 {noformat}
 
-Do Not Use Markdown Links
-
-Incorrect:
+Incorrect Markdown link:
 
 {noformat}
 "Documentation" (https://example.com)
@@ -1376,9 +701,22 @@ Correct:
 [Documentation|https://example.com]
 {noformat}
 
-Do Not Use Markdown Code Fences
+Incorrect Markdown table:
 
-Incorrect:
+{noformat}
+
+Name| Description
+API| Backend service
+{noformat}| 
+
+Correct:
+
+{noformat}
+|| Name || Description ||
+| API | Backend service |
+{noformat}
+
+Incorrect Markdown code block:
 
 {noformat}
 
@@ -1394,249 +732,21 @@ console.log("Hello");
 {code}
 {noformat}
 
-Do Not Create Invalid Tables
-
-Incorrect:
-
-{noformat}
-
-Name| Description
-API| Backend service
-{noformat}| 
-
-Correct:
-
-{noformat}
-|| Name || Description ||
-| API | Backend service |
-{noformat}
-
-Do Not Mix Markup Formats
-
-Incorrect:
-
-{noformat}
-
-Installation
-
-Run:
-
-npm install
-
-{noformat}
-
-Correct:
-
-{noformat}
-h2. Installation
-
-Run:
-
-{code:language=bash}
-npm install
-{code}
-{noformat}
-
----
-
-28. Agent Validation Checklist
-
-Before returning the final content, verify all of the following:
-
-- [ ] Headings use "h1.", "h2.", "h3." and not Markdown headings.
-- [ ] Bold text uses single asterisks.
-- [ ] Italic text uses underscores.
-- [ ] Inline code uses double curly braces.
-- [ ] Code blocks use the "{code}" macro.
-- [ ] Tables use "||" for headers and "|" for normal cells.
-- [ ] External links use "[label|URL]".
-- [ ] Ordered lists use "#".
-- [ ] Unordered lists use "*".
-- [ ] Macros have matching opening and closing tags.
-- [ ] The output does not contain accidental Markdown syntax.
-- [ ] All code indentation is preserved.
-- [ ] Section hierarchy is logical.
-- [ ] There are no invented links, attachments, owners or system details.
-- [ ] Unknown information is marked clearly as a placeholder.
-- [ ] The final response is ready to paste into Confluence.
-
----
-
-29. Placeholder Rules
-
-When required information is missing, use clear placeholders.
-
-Examples:
-
-{noformat}
-[Service Name]
-
-[Team Name]
-
-[Repository URL]
-
-[Environment Name]
-
-[Insert deployment command]
-
-[Decision owner]
-
-YYYY-MM-DD
-{noformat}
-
-Do not invent values.
-
-Do not silently assume:
-
-- Team names
-- URLs
-- Repository names
-- Environment names
-- Credentials
-- Owners
-- Dates
-- Version numbers
-- API paths
-
-When reasonable, use a "TODO" marker:
-
-{noformat}
-TODO: Add the production dashboard URL.
-{noformat}
-
----
-
-30. Final Output Contract
-
-When the user asks for Confluence Wiki Markup:
-
-1. Return valid Confluence Wiki Markup.
-2. Do not return Markdown.
-3. Do not add an explanation before the content unless requested.
-4. Do not wrap the complete result in triple backticks.
-5. Do not describe how the markup works unless requested.
-6. Preserve all user-provided technical details.
-7. Do not invent missing details.
-8. Use placeholders for unresolved information.
-9. Ensure all macros are properly closed.
-10. Make the output immediately paste-ready.
-
----
-
-31. Example of Complete Confluence Wiki Markup Output
-
-h1. Order Service Deployment Guide
-
-This page describes how to deploy the Order Service to the testing and production environments.
-
-{toc:minLevel=2|maxLevel=3}
-
-h2. Overview
-
-The Order Service manages customer orders and payment status.
-
-Repository: [Order Service Repository|https://github.com/example/order-service]
-
-Owner: Platform Team
-
-h2. Prerequisites
-
-Before starting the deployment, verify the following:
-
-* You have access to the target Kubernetes namespace.
-* You have permission to run the deployment pipeline.
-* The required secrets exist in the target environment.
-* All automated tests have passed.
-
-h2. Configuration
-
-|| Variable || Required || Description ||
-| {{PORT}} | Yes | HTTP server port |
-| {{DATABASE_URL}} | Yes | Database connection string |
-| {{LOG_LEVEL}} | No | Application log level |
-
-Example configuration:
-
-{code:language=yaml|title=values.yaml}
-service:
-port: 3000
-
-logging:
-level: info
-{code}
-
-h2. Deployment Procedure
-
-Create a release branch.
-
-Update the application version.
-
-Run the automated tests.
-
-Build the deployment artifact.
-
-Deploy to the testing environment.
-
-Verify the testing deployment.
-
-Request production approval.
-
-Deploy to production.
-
-{warning}
-Do not deploy to production while a database migration from another release is still running.
-{warning}
-
-h2. Verification
-
-After deployment:
-
-Verify that all pods are ready.
-
-Check the health endpoint.
-
-Review the error-rate dashboard.
-
-Submit a test order.
-
-Confirm that the order is stored successfully.
-
-Commands:
-
-{code:language=bash}
-kubectl get pods -n orders
-kubectl rollout status deployment/order-service -n orders
-kubectl logs deployment/order-service -n orders --tail=100
-{code}
-
-h2. Rollback
-
-If the deployment fails:
-
-Stop the current rollout.
-
-Restore the previous application version.
-
-Verify that all pods are healthy.
-
-Confirm that the error rate has returned to normal.
-
-Document the failure in the deployment ticket.
-
-{code:language=bash}
-kubectl rollout undo deployment/order-service -n orders
-kubectl rollout status deployment/order-service -n orders
-{code}
-
-h2. Troubleshooting
-
-|| Problem || Possible Cause || Resolution ||
-| Pods do not start | Invalid configuration | Review environment variables and secrets |
-| Health check fails | Dependency unavailable | Check the database and external services |
-| High error rate | Application regression | Roll back to the previous version |
-
-h2. References
-
-* [Architecture Documentation]
-* [Operational Runbook]
-* [Monitoring Dashboard]
+Final Validation
+
+Before returning the output, verify:
+
+* Headings use {{h1.}}, {{h2.}} and {{h3.}}.
+* There are no Markdown headings.
+* Bold text uses single asterisks.
+* Inline code uses double curly braces.
+* Code blocks use the {{code}} macro.
+* Tables use double pipes for headers.
+* Links use Confluence link syntax.
+* Lists use asterisks or hash symbols.
+* All macros are closed.
+* Code indentation is preserved.
+* No technical details were invented.
+* Missing information uses visible placeholders.
+* The section hierarchy is logical.
+* The output is immediately paste-ready.
