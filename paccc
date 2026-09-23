@@ -1,0 +1,1196 @@
+Team Review Rules Mining
+
+Goal
+
+Analyze historical and newly-added pull request review comments from team members and extract recurring engineering rules, conventions, expectations, and review patterns.
+
+The resulting rule library should represent the team's actual review behavior and serve as input for future automated PR review workflows.
+
+The workflow must be:
+
+- evidence-based
+- idempotent
+- traceable
+- deterministic where possible
+- resistant to duplicate processing
+- resistant to reviewer-specific preferences being mistaken for team-wide rules
+
+Do not treat every review comment as a team rule.
+
+---
+
+Core Principles
+
+1. Never process the same review comment twice.
+2. Every rule must be backed by concrete review-comment evidence.
+3. Never estimate occurrence counts.
+4. All counts must be calculated deterministically from persisted evidence.
+5. AI is responsible for semantic interpretation and matching.
+6. The data/state layer is responsible for counting.
+7. A single reviewer's personal preference must not automatically become a team rule.
+8. Semantically equivalent comments should be grouped into the same rule candidate.
+9. Conflicting reviewer guidance must remain explicitly marked as conflicting.
+10. Existing rules must be re-evaluated over time for drift or obsolescence.
+11. Never invent generic engineering best practices that are not supported by actual team review history.
+
+---
+
+Inputs
+
+Analyze pull requests from the configured repository or repositories.
+
+Focus primarily on:
+
+- inline pull request review comments
+- review summaries
+- requested-changes reviews
+- reviewer discussions that clarify engineering expectations
+- comments made by known human team members
+
+Ignore or heavily discount:
+
+- bot-generated comments
+- CI status messages
+- merge notifications
+- automatic formatting reports
+- dependency-update bots
+- acknowledgements such as:
+  - LGTM
+  - done
+  - fixed
+  - thanks
+  - +1
+- questions that do not express an engineering expectation
+- comments unrelated to engineering or code quality
+
+---
+
+Persistent State
+
+The workflow must maintain persistent state across runs.
+
+The persisted state must contain at least:
+
+{
+  "processedComments": {},
+  "rules": {},
+  "observations": {},
+  "conflicts": {},
+  "reviewerPatterns": {}
+}
+
+The workflow must never rely only on conversational memory or model context.
+
+State must be stored in a persistent file, database, repository artifact, or another durable location.
+
+---
+
+Comment Identity and Idempotency
+
+Each review comment must be uniquely identified.
+
+Primary identity:
+
+repository + comment_id
+
+Additional metadata:
+
+pull_request_number
+reviewer
+created_at
+updated_at
+commit_sha
+file_path
+
+Example:
+
+{
+  "repository": "my-org/my-service",
+  "pullRequest": 184,
+  "commentId": 987654,
+  "reviewer": "reviewer-a",
+  "processedAt": "2026-09-23T14:00:00Z"
+}
+
+Before processing a comment:
+
+IF repository + comment_id already exists in processed state:
+    skip comment
+ELSE:
+    process comment
+
+After processing succeeds:
+
+persist repository + comment_id as processed
+
+Do not mark an entire PR as permanently processed.
+
+A PR may receive new review comments after an earlier run.
+
+Therefore:
+
+PR processed != PR finished
+
+Deduplication must happen at comment level.
+
+---
+
+Step 1 — Discover Pull Requests
+
+Determine the configured scope.
+
+Possible scope examples:
+
+all merged PRs from last 6 months
+all closed PRs from last 12 months
+last 200 pull requests
+all PRs since a configured date
+
+Do not repeatedly analyze old comments that are already recorded in state.
+
+For each PR retrieve:
+
+repository
+PR number
+PR title
+PR URL
+PR author
+created_at
+merged_at / closed_at
+head commit SHA
+
+---
+
+Step 2 — Collect Review Comments
+
+For every PR in scope, retrieve review comments.
+
+For each comment collect:
+
+repository
+pull_request_number
+comment_id
+reviewer
+comment_body
+file_path
+line_number
+code_context
+created_at
+updated_at
+commit_sha
+review_state
+
+Only send comments for analysis when:
+
+repository + comment_id
+
+does not already exist in processed state.
+
+---
+
+Step 3 — Filter Non-Useful Comments
+
+Determine whether the comment contains a meaningful engineering expectation.
+
+Useful examples:
+
+Don't swallow this exception.
+
+Can we add a test for the authorization failure?
+
+This query should not run inside this loop.
+
+Please use the existing validation helper.
+
+We should not expose this internal error message to the client.
+
+Not useful:
+
+LGTM
+
+Nice
+
+Done
+
+Thanks
+
+CI is red
+
+Please rebase
+
+Only meaningful engineering feedback should proceed to rule extraction.
+
+---
+
+Step 4 — Classify the Comment
+
+Assign one or more categories.
+
+Possible categories:
+
+architecture
+api-design
+error-handling
+logging
+testing
+security
+performance
+database
+frontend
+backend
+react
+naming
+code-style
+maintainability
+readability
+observability
+configuration
+dependency-management
+async-concurrency
+validation
+authentication
+authorization
+deployment
+kubernetes
+data-access
+state-management
+other
+
+Example:
+
+"Don't catch this exception and continue silently."
+
+Classification:
+
+error-handling
+observability
+
+---
+
+Step 5 — Normalize Into an Observation
+
+Do not create a rule directly from a review comment.
+
+First transform the comment into a concise normalized observation.
+
+Example source comment:
+
+Please don't catch this error and ignore it.
+
+Normalized observation:
+
+Caught errors should not be silently ignored.
+
+Another source:
+
+Can we log the original exception here? Otherwise debugging this will be painful.
+
+Normalized observation:
+
+Error handling should preserve sufficient diagnostic context.
+
+Every normalized observation must retain a link to its original evidence.
+
+Example:
+
+{
+  "observationId": "obs-123",
+  "text": "Caught errors should not be silently ignored.",
+  "category": [
+    "error-handling"
+  ],
+  "evidence": {
+    "repository": "my-org/my-service",
+    "pullRequest": 142,
+    "commentId": 99101,
+    "reviewer": "reviewer-a"
+  }
+}
+
+---
+
+Step 6 — Match the Observation Against Existing Rules
+
+Before creating a new rule candidate, compare the normalized observation against existing rules.
+
+The AI is responsible for semantic matching.
+
+Examples:
+
+Don't swallow exceptions.
+
+Please don't ignore this error.
+
+This catch block needs to log or rethrow.
+
+We shouldn't silently continue here.
+
+These may all belong to the same conceptual rule:
+
+Do not silently swallow errors.
+
+The AI must determine:
+
+Does this observation match an existing rule?
+
+Possible outcomes:
+
+MATCH_EXISTING_RULE
+CREATE_NEW_CANDIDATE
+POSSIBLE_CONFLICT
+INSUFFICIENT_SIGNAL
+
+---
+
+Important Separation of Responsibilities
+
+The AI may determine semantic similarity.
+
+The AI must NOT determine occurrence counts manually.
+
+Correct architecture:
+
+review comment
+    ↓
+AI normalizes intent
+    ↓
+AI semantically matches existing rule
+    ↓
+system appends evidence
+    ↓
+system recalculates counts
+
+Incorrect architecture:
+
+AI reads comments
+    ↓
+AI says "this happened around 5 times"
+
+Never do this.
+
+---
+
+Step 7 — Attach Evidence
+
+When a comment matches an existing rule, append its source evidence.
+
+Example:
+
+{
+  "ruleId": "error-handling-no-swallow",
+  "evidence": [
+    {
+      "repository": "service-a",
+      "pr": 142,
+      "commentId": 99101,
+      "reviewer": "reviewer-a"
+    },
+    {
+      "repository": "service-a",
+      "pr": 156,
+      "commentId": 104992,
+      "reviewer": "reviewer-b"
+    }
+  ]
+}
+
+Before adding evidence:
+
+IF repository + comment_id already exists in rule evidence:
+    do not add it again
+
+Each comment may count only once toward a rule.
+
+---
+
+Step 8 — Deterministic Counting
+
+All statistics must be derived directly from persisted evidence.
+
+The AI must never estimate these values.
+
+Definitions:
+
+occurrence_count =
+number of unique repository + comment_id values
+attached to the rule
+
+pull_request_count =
+number of unique repository + PR number combinations
+attached to the rule
+
+reviewer_count =
+number of unique reviewer identities
+attached to the rule
+
+Example evidence:
+
+[
+  {
+    "pr": 142,
+    "commentId": 99101,
+    "reviewer": "david"
+  },
+  {
+    "pr": 156,
+    "commentId": 104992,
+    "reviewer": "sarah"
+  },
+  {
+    "pr": 181,
+    "commentId": 118212,
+    "reviewer": "david"
+  }
+]
+
+Calculated result:
+
+occurrence_count = 3
+pull_request_count = 3
+reviewer_count = 2
+
+These values must be calculated programmatically.
+
+Never allow the model to populate them based on memory or approximation.
+
+---
+
+Step 9 — Create a Candidate Rule
+
+If no existing rule matches, create a candidate rule.
+
+Suggested format:
+
+id: error-handling-no-swallow
+
+title: Do not silently swallow errors
+
+category:
+  - error-handling
+  - observability
+
+description: >
+  A caught error should not be silently ignored.
+  It should be rethrown, translated into a meaningful domain error,
+  or logged with sufficient diagnostic context.
+
+status: candidate
+
+evidence: []
+
+occurrence_count: 0
+pull_request_count: 0
+reviewer_count: 0
+
+first_seen:
+last_seen:
+
+confidence: low
+
+Then attach the current comment as evidence.
+
+After adding evidence, recalculate all counts deterministically.
+
+---
+
+Step 10 — Avoid Duplicate Rules
+
+Before creating any new candidate, search existing rules for semantic overlap.
+
+Example:
+
+Existing:
+
+Do not silently swallow errors.
+
+New proposed candidate:
+
+Caught exceptions must be handled explicitly.
+
+These may represent the same underlying rule.
+
+Prefer merging rather than creating duplicate entries.
+
+When merging:
+
+combine unique evidence
+recalculate counts
+preserve earliest first_seen
+preserve latest last_seen
+
+Never count the same comment twice after merging.
+
+---
+
+Step 11 — Confidence Calculation
+
+Confidence must be derived from evidence.
+
+Confidence should consider:
+
+occurrence_count
+pull_request_count
+reviewer_count
+recency
+consistency
+contradictory evidence
+
+Suggested baseline:
+
+Low Confidence
+
+Typical conditions:
+
+1-2 unique comments
+OR
+only 1 PR
+OR
+only 1 reviewer
+
+Interpretation:
+
+possible preference
+
+---
+
+Medium Confidence
+
+Typical conditions:
+
+3+ unique comments
+2+ PRs
+2+ reviewers
+
+Interpretation:
+
+likely team convention
+
+---
+
+High Confidence
+
+Typical conditions:
+
+5+ unique comments
+3+ PRs
+3+ reviewers
+consistent feedback
+no meaningful contradiction
+
+Interpretation:
+
+strong team review expectation
+
+Thresholds may be configurable.
+
+Confidence must never be based purely on model intuition.
+
+---
+
+Step 12 — Reviewer-Specific Patterns
+
+A repeated comment from one reviewer does not automatically represent team consensus.
+
+Example:
+
+Reviewer A requests early returns in 9 PRs.
+No other reviewer mentions this.
+
+Store as:
+
+status: reviewer-pattern
+
+scope: reviewer-specific
+
+reviewer: reviewer-a
+
+pattern: Prefer early returns over nested conditionals.
+
+occurrence_count: 9
+reviewer_count: 1
+
+Do not promote to team rule solely because occurrence count is high.
+
+A high number of comments from one person is not equivalent to team consensus.
+
+---
+
+Step 13 — Distinguish Repetition From Consensus
+
+These scenarios are different:
+
+8 comments
+1 reviewer
+
+versus:
+
+8 comments
+5 reviewers
+
+The second provides stronger evidence of team-wide consensus.
+
+Confidence logic should therefore place substantial weight on:
+
+unique reviewers
+
+not only:
+
+occurrence count
+
+---
+
+Step 14 — Detect Conflicting Guidance
+
+If reviewers recommend opposing approaches, do not invent a resolution.
+
+Example:
+
+Reviewer A:
+Validation belongs in the service layer.
+
+Reviewer B:
+Validation should happen in the controller.
+
+Store a conflict:
+
+id: validation-location
+
+status: conflicting-guidance
+
+positions:
+  - position: service-layer
+    evidence:
+      - commentId: 123
+        reviewer: reviewer-a
+
+  - position: controller-layer
+    evidence:
+      - commentId: 456
+        reviewer: reviewer-b
+
+Do not promote the topic to a team rule.
+
+Surface the conflict for human review.
+
+---
+
+Step 15 — Track Time and Recency
+
+Every rule should track:
+
+first_seen
+last_seen
+
+These must also be calculated from evidence.
+
+first_seen =
+earliest evidence timestamp
+
+last_seen =
+latest evidence timestamp
+
+Do not ask the AI to estimate dates.
+
+---
+
+Step 16 — Detect Rule Drift
+
+Rules should not live forever without reassessment.
+
+Flag rules when:
+
+- the rule has not appeared for a long period
+- recent comments recommend a different pattern
+- the architecture changed
+- the relevant framework/library was removed
+- comments strongly contradict the historical rule
+- code patterns associated with the rule no longer exist
+
+Possible status:
+
+status: possibly-outdated
+
+Do not delete evidence.
+
+Preserve historical records.
+
+---
+
+Step 17 — Track Positive and Negative Evidence
+
+Where useful, distinguish:
+
+supporting evidence
+contradicting evidence
+
+Example:
+
+{
+  "ruleId": "validation-service-layer",
+  "supportingEvidence": 6,
+  "contradictingEvidence": 3
+}
+
+These counts must also be derived from unique evidence IDs.
+
+The AI may classify a comment as supporting or contradicting.
+
+The data layer performs the count.
+
+---
+
+Step 18 — Store Representative Examples
+
+Do not display every historical comment in the final rule file.
+
+Instead store all evidence in the data layer and display a small number of representative examples.
+
+Example:
+
+Representative evidence:
+
+PR #142 — reviewer-a
+PR #156 — reviewer-b
+PR #181 — reviewer-c
+
+The complete evidence mapping should remain available separately.
+
+---
+
+Step 19 — Rule Storage Structure
+
+Recommended structure:
+
+team-review-rules/
+
+  README.md
+
+  rules/
+    architecture.md
+    api-design.md
+    backend.md
+    frontend.md
+    error-handling.md
+    logging.md
+    testing.md
+    security.md
+    performance.md
+    database.md
+    maintainability.md
+
+  reviewer-patterns.md
+  conflicts.md
+  deprecated-rules.md
+
+  state/
+    processed-comments.json
+    observations.json
+    rule-evidence.json
+    rules.json
+
+---
+
+Step 20 — Machine-Readable Rule Structure
+
+Each rule should also exist in structured form.
+
+Example:
+
+{
+  "id": "error-handling-no-swallow",
+  "title": "Do not silently swallow errors",
+  "categories": [
+    "error-handling",
+    "observability"
+  ],
+  "status": "active",
+  "confidence": "high",
+  "occurrenceCount": 8,
+  "pullRequestCount": 6,
+  "reviewerCount": 4,
+  "firstSeen": "2026-02-11T09:15:00Z",
+  "lastSeen": "2026-09-18T11:42:00Z",
+  "evidence": [
+    {
+      "repository": "service-a",
+      "pr": 142,
+      "commentId": 99101,
+      "reviewer": "reviewer-a"
+    }
+  ]
+}
+
+Remember:
+
+occurrenceCount
+pullRequestCount
+reviewerCount
+firstSeen
+lastSeen
+
+must always be recalculated from evidence.
+
+---
+
+Step 21 — Human-Readable Rule Format
+
+Example:
+
+## Do not silently swallow errors
+
+Category:
+Error Handling / Observability
+
+Status:
+High Confidence
+
+Rule:
+Caught errors must not be silently ignored.
+
+Expected behavior:
+
+- rethrow the error, or
+- convert it into a meaningful domain error, or
+- log enough context to diagnose the failure.
+
+Evidence summary:
+
+- 8 unique review comments
+- 6 pull requests
+- 4 reviewers
+
+First observed:
+2026-02-11
+
+Last observed:
+2026-09-18
+
+Representative examples:
+
+- PR #142 — reviewer-a
+- PR #156 — reviewer-b
+- PR #181 — reviewer-c
+
+---
+
+Step 22 — Run Summary
+
+At the end of every run, provide a concise report.
+
+Example:
+
+PRs scanned: 42
+
+Review comments found: 318
+
+Already processed comments skipped: 271
+
+New comments processed: 47
+
+Relevant engineering comments: 31
+
+Comments ignored as non-actionable: 16
+
+Matched existing rules: 22
+
+New candidate rules: 5
+
+Rules promoted to medium confidence: 3
+
+Rules promoted to high confidence: 1
+
+Reviewer-specific patterns detected: 2
+
+Conflicting guidance detected: 1
+
+Possibly outdated rules: 2
+
+---
+
+Step 23 — Validation Before Saving
+
+Before committing any changes to the rule library, verify:
+
+no duplicate comment IDs
+no duplicate evidence
+no duplicate semantic rules
+counts equal the underlying persisted evidence
+reviewer-specific feedback is not presented as team consensus
+conflicts are not silently resolved
+all rules have traceable sources
+confidence matches configured thresholds
+
+If counts cannot be reproduced from evidence, treat this as an error.
+
+---
+
+Step 24 — Deterministic Recalculation
+
+Whenever rules are loaded, merged, modified, or migrated, recalculate:
+
+occurrence_count
+pull_request_count
+reviewer_count
+first_seen
+last_seen
+
+from the underlying evidence.
+
+Stored aggregate values must never be treated as the ultimate source of truth.
+
+The evidence records are the source of truth.
+
+---
+
+Step 25 — Failure Safety
+
+Do not mark a comment as processed before its analysis and evidence update complete successfully.
+
+Correct order:
+
+fetch comment
+    ↓
+analyze
+    ↓
+match/create rule
+    ↓
+persist evidence
+    ↓
+recalculate aggregates
+    ↓
+persist rule
+    ↓
+mark comment processed
+
+If the run fails before completion, the comment may safely be retried.
+
+This prevents lost comments.
+
+---
+
+Step 26 — Handling Edited Comments
+
+If the source platform exposes "updated_at", track it.
+
+Recommended identity:
+
+repository
+comment_id
+last_processed_updated_at
+
+If:
+
+comment.updated_at > last_processed_updated_at
+
+the comment may be reprocessed.
+
+When reprocessing an edited comment:
+
+1. remove or invalidate its previous observation mapping
+2. analyze the updated content
+3. rematch it
+4. update evidence
+5. recalculate affected rules
+
+Do not increase occurrence count merely because a comment was edited.
+
+The same "comment_id" still represents one occurrence.
+
+---
+
+Step 27 — Multi-Repository Support
+
+When multiple repositories are included, always use:
+
+repository + comment_id
+
+and:
+
+repository + pull_request_number
+
+as unique identifiers.
+
+Never assume PR numbers or comment IDs are globally unique across repositories.
+
+---
+
+Step 28 — Rule Promotion
+
+Recommended lifecycle:
+
+observation
+    ↓
+candidate
+    ↓
+team-pattern
+    ↓
+high-confidence-rule
+
+Additional states:
+
+reviewer-pattern
+conflicting-guidance
+possibly-outdated
+deprecated
+
+Promotion should be driven by deterministic evidence thresholds.
+
+---
+
+Step 29 — Never Invent Rules
+
+Do not generate generic rules simply because they are considered good engineering practice.
+
+Bad example:
+
+Always write unit tests.
+
+unless the team's review history genuinely supports that claim.
+
+Better example:
+
+When introducing a new API endpoint, reviewers repeatedly request tests covering authorization and input validation failures.
+
+when supported by actual review comments.
+
+---
+
+Step 30 — Preserve Context
+
+When evaluating a comment, consider the nearby code context.
+
+Example:
+
+"Don't do this."
+
+is meaningless without context.
+
+The workflow should use:
+
+file path
+diff hunk
+nearby lines
+comment thread
+
+when necessary to determine the intent.
+
+Do not create a rule when the intent cannot be reliably understood.
+
+---
+
+Step 31 — Avoid Over-Generalization
+
+Example comment:
+
+Don't use Promise.all here because this API has a rate limit.
+
+Do NOT create:
+
+Never use Promise.all.
+
+Instead normalize narrowly:
+
+Avoid unbounded concurrent requests to rate-limited external APIs.
+
+Rules should represent the narrowest reusable principle justified by the evidence.
+
+---
+
+Step 32 — Detect Existing Enforcement
+
+If a rule is already automatically enforced by:
+
+ESLint
+TypeScript
+tests
+CI
+security scanner
+formatter
+static analysis
+
+mark it:
+
+automatically_enforced: true
+
+This helps future PR reviewers avoid producing redundant comments.
+
+Example:
+
+Rule:
+Unused imports are not allowed.
+
+Automatically enforced:
+ESLint
+
+Such rules may remain documented but should be deprioritized in AI review.
+
+---
+
+Step 33 — Future PR Review Integration
+
+The resulting rule library is designed to be consumed by another PR Review Playbook.
+
+That reviewer should distinguish between:
+
+HIGH CONFIDENCE TEAM RULE
+MEDIUM CONFIDENCE TEAM PATTERN
+REVIEWER-SPECIFIC PREFERENCE
+CONFLICTING GUIDANCE
+OUTDATED RULE
+
+High-confidence team rules may be used as strong review findings.
+
+Medium-confidence patterns should be expressed more cautiously.
+
+Reviewer-specific patterns should not be presented as mandatory team standards.
+
+Conflicts should not be enforced automatically.
+
+---
+
+Step 34 — PR Review Feedback Loop
+
+When the automated PR reviewer later uses one of these rules, record which rule generated the automated finding.
+
+Example:
+
+{
+  "pr": 245,
+  "automatedFinding": "finding-993",
+  "ruleId": "error-handling-no-swallow"
+}
+
+If humans repeatedly:
+
+accept
+resolve
+reject
+ignore
+correct
+
+the AI-generated finding, this may later be used to measure rule usefulness.
+
+Do not automatically delete rules based solely on one rejected automated finding.
+
+---
+
+Step 35 — Final Source-of-Truth Rule
+
+The source of truth is:
+
+raw unique review-comment evidence
+
+Not:
+
+model memory
+aggregate numbers
+generated markdown
+previous summaries
+
+Everything must be reproducible from the underlying evidence.
+
+The model interprets.
+
+The system counts.
+
+The evidence decides.
