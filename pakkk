@@ -1,0 +1,503 @@
+Additional Rules
+
+1. Ignore Self-Review as Team Consensus
+
+Comments written by the PR author on their own pull request should not normally count as independent team review evidence.
+
+They may still be stored as context, but they should not increase reviewer consensus.
+
+---
+
+2. Distinguish Suggestions From Requirements
+
+Not every review comment represents a mandatory rule.
+
+Examples:
+
+"Maybe we could simplify this."
+
+is different from:
+
+"We must validate this before calling the service."
+
+Classify feedback strength when possible:
+
+suggestion
+preference
+recommendation
+requirement
+correctness issue
+security issue
+
+Do not automatically promote weak suggestions into team rules.
+
+---
+
+3. Detect Withdrawn Feedback
+
+If a reviewer later writes something equivalent to:
+
+Ignore this.
+Never mind.
+My mistake.
+This is fine as-is.
+
+the original comment must not remain active supporting evidence.
+
+Preserve it historically, but mark it as:
+
+withdrawn
+
+and exclude it from confidence calculations.
+
+---
+
+4. Consider Review Resolution
+
+Track what happened after the review comment when this information is available.
+
+Useful states may include:
+
+addressed
+accepted
+rejected
+withdrawn
+unresolved
+unknown
+
+A comment that resulted in an actual code change can be stronger evidence than a comment that was explicitly rejected.
+
+However, resolution state must not be invented if it cannot be determined reliably.
+
+---
+
+5. One Discussion Thread Is One Independent Signal
+
+Multiple messages in the same review discussion must not artificially increase confidence.
+
+For example:
+
+Reviewer:
+Don't swallow this error.
+
+Author:
+Should I rethrow it?
+
+Reviewer:
+Yes, or log it with context.
+
+Author:
+Done.
+
+This is one independent review occurrence, not four.
+
+Track both:
+
+comment_count
+independent_occurrence_count
+
+Confidence should primarily use:
+
+independent_occurrence_count
+pull_request_count
+reviewer_count
+
+rather than raw comment count.
+
+---
+
+6. Detect Repeated Copy-Paste Feedback
+
+A reviewer may leave essentially the same comment on multiple nearby lines or files in the same PR.
+
+Example:
+
+PR #123
+
+file-a.ts:
+"Use the shared validation helper."
+
+file-b.ts:
+"Use the shared validation helper."
+
+file-c.ts:
+"Use the shared validation helper."
+
+Do not automatically count these as three independent team signals.
+
+They may represent one underlying review decision.
+
+Group repeated feedback when all of the following are true:
+
+- same PR
+- same reviewer
+- semantically equivalent feedback
+- closely related code changes
+
+Preserve all source comments, but calculate independent occurrences separately.
+
+---
+
+7. Preserve Rule Scope
+
+Rules must include the narrowest appropriate scope.
+
+Possible scopes:
+
+organization
+repository
+backend
+frontend
+React
+Node.js
+API
+database
+specific package
+specific service
+specific directory
+
+Example:
+
+Bad:
+
+Never mutate objects.
+
+Better:
+
+In React state updates, do not mutate existing state objects directly.
+
+Do not apply a local convention globally without evidence.
+
+---
+
+8. Avoid Over-Generalization
+
+Always derive the narrowest reusable rule justified by the evidence.
+
+Example source comment:
+
+Don't use Promise.all here because this API has a rate limit.
+
+Bad rule:
+
+Never use Promise.all.
+
+Better rule:
+
+Avoid unbounded concurrent requests when calling rate-limited external APIs.
+
+---
+
+9. Track Whether Feedback Was Implemented
+
+When possible, determine whether the reviewed code changed after the comment.
+
+Store:
+
+implemented: true | false | unknown
+
+A repeatedly implemented reviewer request may provide stronger evidence that the pattern represents an accepted team convention.
+
+Do not infer implementation unless it can be verified from the PR history or diff.
+
+---
+
+10. Detect Rejected Feedback
+
+If the author challenges a review comment and the reviewer explicitly agrees that no change is required, the original comment must not count as active rule evidence.
+
+Example:
+
+Reviewer:
+Move this validation into the controller.
+
+Author:
+We intentionally keep this validation in the service because both HTTP and Kafka use it.
+
+Reviewer:
+Makes sense. Keep it here.
+
+The first comment must not become supporting evidence for:
+
+Validation belongs in controllers.
+
+Instead mark the original suggestion as rejected or withdrawn.
+
+---
+
+11. Distinguish Rule Types
+
+Classify extracted rules by type.
+
+Suggested values:
+
+correctness
+security
+architecture
+team-convention
+maintainability
+performance
+testing
+style
+observability
+reliability
+
+This matters because different rule types require different confidence treatment.
+
+For example, a security vulnerability does not need repeated reviewer consensus to be important.
+
+---
+
+12. Separate Team Conventions From Engineering Facts
+
+Do not treat all findings as team preferences.
+
+Example:
+
+This query allows SQL injection.
+
+is fundamentally different from:
+
+We prefer early returns.
+
+The first is a correctness/security issue.
+
+The second is a team convention.
+
+Store this distinction explicitly.
+
+---
+
+13. Exclude Bots From Human Consensus
+
+Bot-generated review comments must not increase:
+
+reviewer_count
+team_consensus
+
+unless the workflow explicitly maintains a separate automated-rules category.
+
+Examples:
+
+Dependabot
+Renovate
+CodeQL
+Sonar
+lint bots
+CI bots
+
+Automated findings may be stored separately.
+
+---
+
+14. Track Technology and Time Context
+
+A rule may only be valid for a certain technology version or historical period.
+
+Store context such as:
+
+framework
+framework_version
+language
+runtime
+repository
+first_seen
+last_seen
+
+Example:
+
+A React 17 pattern should not automatically remain active after a migration to React 19 if the underlying reasoning no longer applies.
+
+---
+
+15. Preserve Source Code Context
+
+When available, store enough context to understand the original review comment:
+
+file_path
+line_number
+diff_hunk
+commit_sha
+surrounding_code
+thread_context
+
+Short comments such as:
+
+Don't do this.
+
+must not generate rules without sufficient surrounding context.
+
+---
+
+16. Never Lose Evidence During Rule Merges
+
+When two semantically equivalent rules are merged:
+
+merge rule representation
+merge unique evidence
+recalculate aggregates
+
+Never discard the original review evidence.
+
+Evidence is the source of truth.
+
+---
+
+17. Keep Rule IDs Stable
+
+A rule's human-readable title may change over time.
+
+Its stable identifier must not.
+
+Example:
+
+ruleId: error-handling-no-swallow
+
+may initially have the title:
+
+Do not ignore errors.
+
+and later become:
+
+Do not silently swallow exceptions.
+
+The "ruleId" should remain unchanged so historical evidence and integrations stay intact.
+
+---
+
+18. Do Not Resolve Conflicts by Majority Alone
+
+If contradictory guidance exists, do not simply choose whichever side has more comments.
+
+Example:
+
+10 comments support approach A
+3 comments support approach B
+
+This may still indicate:
+
+conflicting-guidance
+
+especially if the disagreement is recent or comes from different architectural contexts.
+
+The system should surface the conflict instead of pretending consensus exists.
+
+---
+
+19. Use Atomic State Updates
+
+Updating a rule should behave as one logical transaction.
+
+The following should remain consistent:
+
+evidence
+derived counts
+rule state
+processed-comment state
+
+A failure in the middle of processing must not leave a comment marked as processed without its evidence being stored.
+
+Preferred sequence:
+
+analyze
+→ attach evidence
+→ recalculate counts
+→ persist rule
+→ mark comment processed
+
+---
+
+20. Support Dry-Run Mode
+
+The workflow should support a mode where it analyzes everything but does not modify the persisted rule library.
+
+Example output:
+
+Dry Run
+
+47 new comments found
+22 matched existing rules
+5 new candidate rules
+3 possible rule merges
+2 reviewer-specific patterns
+1 conflict
+1 potentially outdated rule
+
+No state was modified.
+
+This is useful for validating changes to the mining logic safely.
+
+---
+
+Independent Occurrence Model
+
+Store at least these four metrics:
+
+comment_count
+independent_occurrence_count
+pull_request_count
+reviewer_count
+
+Definitions:
+
+comment_count =
+number of unique source review comments
+
+independent_occurrence_count =
+number of independent review decisions or feedback instances
+after collapsing duplicate comments, thread replies,
+and repeated feedback within the same PR
+
+pull_request_count =
+number of unique PRs containing independent evidence
+
+reviewer_count =
+number of unique human reviewers contributing independent evidence
+
+Example:
+
+A reviewer leaves the same feedback on 10 files inside one PR.
+
+Result:
+
+comment_count = 10
+
+independent_occurrence_count = 1
+
+pull_request_count = 1
+
+reviewer_count = 1
+
+If the same pattern later appears independently in 4 additional PRs from 3 different reviewers:
+
+comment_count = 14+
+
+independent_occurrence_count = 5
+
+pull_request_count = 5
+
+reviewer_count = 3+
+
+Confidence should primarily be driven by:
+
+independent_occurrence_count
+pull_request_count
+reviewer_count
+
+Raw "comment_count" should be treated mainly as informational.
+
+---
+
+Final Principle
+
+The system must distinguish between:
+
+number of comments
+
+and:
+
+number of independent pieces of evidence
+
+Repeated comments do not necessarily mean stronger consensus.
+
+Independent repetition across different PRs, reviewers, and contexts is the stronger signal.
