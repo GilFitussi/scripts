@@ -1,0 +1,292 @@
+# Action Plan: Automated Mongo Error Triage Pipeline
+
+## 1. Goal
+
+Replace manual review of Mongo errors (`status` + human-readable `message`) with a staged, semi-automated process that:
+
+1. Detects and groups errors
+2. Diagnoses likely root causes using Kibana and OpenShift data
+3. Creates or updates Jira tickets, or drafts them for review
+4. Hands well-scoped code bugs to Devin for fixing
+5. Verifies fixes and learns over time
+
+**Constraint:** human involvement is minimal but present at two points, to confirm that the diagnosis and the fix are correct.
+
+---
+
+## 2. Roles and Access
+
+| Actor | Role | Access | Why |
+|---|---|---|---|
+| **Scripts** (Python/Node) | Deterministic facts: fetch, normalize, fingerprint, count, trend | Mongo (read-only) | LLMs make mistakes with counts and large-scale grouping |
+| **Copilot** (Agent Mode) | Orchestration, investigation, diagnosis, reporting, Jira drafting | Mongo, Kibana, `oc` | It has the access and can reason across sources |
+| **Jira** | Source of truth for task state, and the only handoff point between Copilot and Devin | n/a | Devin can't see your systems |
+| **Devin** | Code fix: branch, tests, PR | Repos and Jira only | No access to Mongo, Kibana, or `oc` |
+| **You** | Two approval gates | n/a | Verify that diagnosis and fix are correct |
+
+> **Key rule:** Devin can't see your systems, so every Jira ticket must be **self-contained**. It needs sanitized logs, examples, the suspected code location, expected behavior, and acceptance criteria.
+
+---
+
+## 3. High-Level Flow
+
+```
+[1 Collect] → [2 Normalize + Fingerprint] → [3 Prioritize] → [4 Enrich] → [5 Diagnose + Root-Cause Grouping]
+   Mongo            script                     script         Kibana+oc          Copilot
+                                                                                    ↓
+[9 Verify & Learn] ← [8 Devin PR] ← [7 Jira create/update] ← 👤 [6 Human Gate #1: Triage Report]
+        ↑                                    
+        └──────────── 👤 Human Gate #2: Code Review & Merge ────────┘
+```
+
+---
+
+## 4. Stage-by-Stage Specification
+
+### Stage 1: Collect (script, Mongo read-only)
+- Query errors in a time window (e.g., 24h or 7d).
+- Fields: `status`, `message`, service, timestamp, and `correlationId`, `userId`, `stack` if available.
+- **Output:** a summarized `errors.json`, not raw dumps.
+
+### Stage 2: Normalize and Fingerprint (script)
+- Replace volatile tokens in `message` with placeholders: GUIDs → `<ID>`, numbers → `<NUM>`, dates → `<DATE>`, emails → `<EMAIL>`, and so on.
+- `fingerprint = hash(status + service + normalized_message)`
+- **The fingerprint must be stable across runs.** Never include pod names, versions, or timestamps in it. Jira deduplication depends on it.
+- Optional: Copilot suggests merging semantically similar clusters (same error, different wording).
+
+### Stage 3: Prioritize (script)
+Per symptom cluster, compute:
+- Count and trend (new / rising / stable / falling)
+- First seen and last seen
+- Number of affected users or entities
+- Service
+
+Output the Top-N (e.g., 10–20) for enrichment. Clusters marked `ignore` in `known-errors.json` are skipped.
+
+### Stage 4: Enrich (Copilot: Kibana + `oc`)
+For each Top-N cluster:
+- **Kibana:** 3–5 sample logs, lookup by `correlationId`, stack traces, downstream calls around the error
+- **`oc` (read-only):** pod status, restarts and OOMKilled, `oc rollout history`, events, running version
+- **Time correlation:** did the error start after a deploy, config change, or dependency failure?
+
+### Stage 5: Diagnose and Group by Root Cause (Copilot, assisted by scripts)
+For each cluster, and then across clusters, Copilot produces:
+- **Category:** `user/validation` | `data issue` | `downstream/dependency` | `infra/config` | `code bug` | `unknown`
+- **Root-cause hypothesis** with evidence (Kibana links, queries, `oc` findings)
+- **Confidence:** high / medium / low
+- **Recommended action** and suspected repo or component
+- **Devin-suitable?** yes/no and why
+
+#### Two-level grouping
+
+| Level | Based on | Done by | Output |
+|---|---|---|---|
+| **1. Symptom cluster** | Mongo only: `status` + service + normalized `message` | Script | Stable `fingerprint` |
+| **2. Root-cause group** | Level 1 clusters + Kibana + `oc` evidence | Copilot (script-assisted) | `root_cause_id` |
+
+**Why two levels:**
+- The fingerprint stays stable and cheap, and enrichment runs only on the Top-N.
+- Root-cause grouping merges symptoms that share a cause. It can also split one generic message into several causes.
+
+**Merge examples:** five messages from service A that are all timeouts toward service B, which was OOMKilled at the same time. Or errors that all start minutes after one rollout.
+**Split example:** `Request failed` that Kibana shows comes from three different downstream services.
+
+**Signals for merging:**
+
+| Signal | Source | Checked by |
+|---|---|---|
+| Same `correlationId` across clusters (cascade) | Mongo + Kibana | Script |
+| Same top stack frame or exception class | Kibana | Script or Copilot |
+| Same downstream host/service | Kibana | Copilot |
+| Onset right after a deploy, restart, or OOMKill | `oc` + Mongo | Copilot |
+| Semantic similarity of messages | Mongo | Copilot |
+
+**Sample output:**
+```json
+{
+  "root_cause_id": "rc-001",
+  "hypothesis": "OOMKilled in payments-svc causes timeouts in dependent services",
+  "category": "infra/config",
+  "confidence": "high",
+  "clusters": ["fp-a1b2", "fp-c3d4", "fp-e5f6"],
+  "evidence": {
+    "kibana": ["<link>", "<link>"],
+    "oc": "3 restarts (OOMKilled) between 10:02 and 10:40",
+    "timing": "started 2 minutes after rollout revision 42"
+  }
+}
+```
+
+### 👤 Stage 6: Human Gate #1, Triage Report
+Copilot writes `data/runs/<date>/triage-report.md`. You answer once per cluster or group:
+
+| Action | Meaning |
+|---|---|
+| ✅ Approve | Diagnosis is right, proceed |
+| ✏️ Correct category | Change the category |
+| 🔗 Merge / split | Adjust root-cause grouping |
+| 🚫 Ignore | Known issue or noise, add to `known-errors.json` |
+
+Expected effort is 5–10 minutes per run.
+
+### Stage 7: Jira (Copilot)
+- **Deduplicate:** search for an existing ticket by label `fp-<hash>`.
+  - **Exists:** add a comment with updated counts. If it was Resolved and the error reappears, flag it as a **regression**.
+  - **Doesn't exist:** create a ticket, as a draft/proposal at first and direct creation once you trust the output.
+- **One ticket per `root_cause_id`.** All included `fp-…` labels are attached to it.
+- **Labels:** `auto-triage`, `fp-<hash>` (one per cluster), and `devin-ready` when the criteria are met.
+
+**Ticket template (self-contained):**
+```
+Summary:            <one line>
+Impact:             counts, trend, first/last seen, affected users
+Diagnosis:          category, root-cause hypothesis, confidence
+Evidence:           sanitized log samples, queries, oc findings
+Suspected code:     repo, files, functions
+Expected behavior:  what should happen instead
+Acceptance criteria: testable conditions + how to verify after deploy
+Fingerprints:       fp-xxxx, fp-yyyy
+Labels:             auto-triage, fp-..., devin-ready (if applicable)
+```
+
+### Stage 8: Devin (only tickets labeled `devin-ready`)
+**Criteria for `devin-ready`:**
+- Category is `code bug`
+- Confidence is high
+- The issue is clearly reproducible or described
+- The fix has limited scope
+
+**Devin's work:** read the ticket, implement the fix and a test, open a PR linked to Jira.
+
+👤 **Human Gate #2:** you do code review and merge. **There is no auto-merge.**
+
+### Stage 9: Verify and Learn
+- After deploy, Copilot re-runs the query for the fingerprint and confirms the count dropped. It then closes or updates the ticket.
+- Maintain `known-errors.json` with fingerprint, category, root-cause link, resolution, and an `ignore` flag. Each run reads it, which saves effort and improves accuracy over time.
+
+---
+
+## 5. Implementation Architecture
+
+### Three layers
+
+| Layer | What it does |
+|---|---|
+| **Scripts** | Fetch, normalize, fingerprint, count, trend, dedupe against `known-errors.json`, PII masking |
+| **Copilot prompts/skills** | Run the scripts, enrich via Kibana and `oc`, diagnose, group by root cause, write report and tickets |
+| **Jira + Devin** | Jira holds state, and Devin starts from labeled tickets |
+
+### Repo structure
+```
+error-triage/
+├── .github/
+│   ├── copilot-instructions.md      # permanent rules: read-only, PII, categories, schema
+│   ├── prompts/
+│   │   ├── triage.prompt.md         # stages 1–5  (/triage)
+│   │   ├── jira-draft.prompt.md     # stage 7
+│   │   └── verify.prompt.md         # stage 9
+│   └── skills/                      # optional, later
+│       └── mongo-error-triage/SKILL.md
+├── scripts/
+│   ├── fetch_errors.py              # Mongo → errors.json
+│   ├── normalize_cluster.py         # normalize + fingerprint + counts + trend
+│   └── mask_pii.py
+├── data/
+│   ├── known-errors.json            # memory: fingerprint → category/resolution/ignore
+│   └── runs/YYYY-MM-DD/             # per-run output
+└── templates/jira-ticket.md
+```
+
+### Prompt files vs. Skills
+- **Prompt files:** you trigger them manually (e.g., `/triage last 24h`). They're simple and predictable, so start here.
+- **Skill (`SKILL.md`):** loaded automatically when the request is relevant, and it's portable across agents. Package the process as a skill once it's stable. The logic is the same and only the packaging changes. Check that your Copilot version and IDE support Agent Skills.
+
+### Typical run
+1. Run `/triage last 24h` in Copilot Agent Mode.
+2. Copilot runs `fetch_errors.py` and then `normalize_cluster.py`, which produce `clusters.json`.
+3. It filters out `ignore` clusters, enriches the Top-N via Kibana and `oc`, diagnoses, and groups by root cause.
+4. It writes `triage-report.md`, and you review it (Gate #1).
+5. You reply, for example: "approve 1, 2, 4; ignore 3; merge 5 into 2".
+6. Run `/jira-draft` to create or update tickets.
+7. Tickets labeled `devin-ready` go to Devin. You review the PR (Gate #2).
+8. After deploy, run `/verify`.
+
+### Scheduling (later)
+- Copilot's access to Mongo, Kibana, and `oc` likely works from **your machine or an internal network**, so a scheduled run needs an internal runner with the same access, not a public cloud CI.
+- **Stages 1–3** are scripts only and can run on cron or an internal pipeline.
+- **Stages 4–5** stay on-demand, or run through Copilot CLI on a machine with the same access.
+- **Devin** is triggered from Jira (label or manual link), so it needs no scheduling.
+
+---
+
+## 6. Safety and Governance
+
+- **Mongo:** dedicated read-only user.
+- **`oc`:** only `get`, `describe`, `logs`, `rollout history`, `events`. No `exec`, `delete`, `apply`, `scale`, or `rollout restart`. Enforce this in `copilot-instructions.md` and, if possible, with RBAC.
+- **PII:** mask names, emails, national IDs, and tokens **before** data enters Jira or reaches Devin. Run `mask_pii.py` on every sample.
+- **Traceability:** every automated ticket carries the `auto-triage` label.
+- **No auto-merge, no auto-deploy.**
+- **Counts always come from scripts.** The LLM may interpret them but never calculates them.
+- **Data minimization:** put only the necessary samples in tickets (3–5, sanitized).
+
+---
+
+## 7. Phased Rollout
+
+| Phase | Deliverable | Human involvement | Exit criteria |
+|---|---|---|---|
+| **1. Triage report** | Scripts + `/triage` produce a report (stages 1–5), run manually | Read the report | Clusters are sensible, and the diagnosis matches your judgment in most cases |
+| **2. Jira drafts** | `/jira-draft` with dedup by `fp-<hash>`, drafts only | Approve each ticket | Few duplicates, and tickets are self-contained |
+| **3. Devin on simple bugs** | `devin-ready` tickets for simple `code bug`s only | Code review | PRs are mergeable with few changes |
+| **4. Scheduled + auto-verify** | Daily/weekly runs, automatic `/verify` | Exceptions only | Stable output, `known-errors.json` is mature |
+| **5. Auto-fix (future)** | Auto-fix for allowlisted safe categories | PR review, possibly relaxed later | Proven track record in phase 3 |
+
+---
+
+## 8. Week-One Checklist
+
+**Day 1**
+- [ ] Get a sample Mongo document (fields masked) and 10–20 sample `message` values.
+- [ ] Create a read-only Mongo user and confirm `oc` RBAC is read-only.
+- [ ] Write `fetch_errors.py` and `normalize_cluster.py`. Run them manually until the clusters look sensible.
+
+**Day 2**
+- [ ] Write `copilot-instructions.md`: read-only rules, PII rules, category definitions, output schema.
+- [ ] Write `triage.prompt.md` for stages 1–5.
+- [ ] Run `/triage` and iterate on the prompt based on the report.
+
+**Day 3 and later**
+- [ ] Create `known-errors.json` and seed it with confirmed ignores.
+- [ ] Add `/jira-draft` (dedup by label), and pilot it on 2–3 tickets.
+- [ ] Define the `devin-ready` criteria with your manager.
+- [ ] Run a first Devin pilot on one simple bug.
+
+---
+
+## 9. Open Questions
+
+1. Does the Mongo error document have fields beyond `status` and `message` (service, `correlationId`, timestamp, stack, `userId`)?
+2. What is the daily error volume (hundreds, thousands, millions)?
+3. Can Kibana logs be linked to Mongo records (same `correlationId` or time)?
+4. Is the code on GitHub, and how do repos map to services?
+5. Is `message` free text, or are there fixed error codes?
+6. Does your Copilot version support MCP servers (Mongo, Elasticsearch/Kibana, Atlassian) and Agent Skills?
+7. How does Devin get triggered in your setup (Jira integration, or manual)?
+
+---
+
+## 10. Risks and Mitigations
+
+| Risk | Mitigation |
+|---|---|
+| LLM miscounts or mis-clusters | Scripts own counts and fingerprints |
+| Unstable fingerprints cause duplicate tickets | Exclude volatile tokens, and test normalization on historical data |
+| Wrong diagnosis leads to a bad fix | Gate #1, a confidence threshold, and strict `devin-ready` criteria |
+| PII leaks into Jira or Devin | Mandatory masking step, and a check before ticket creation |
+| Enrichment is slow or expensive | Run it on the Top-N only, and skip known/ignored clusters |
+| Devin lacks context | Self-contained ticket template with acceptance criteria |
+| Accidental changes in production | Read-only credentials, `oc` command allowlist, no auto-merge |
+
+---
+
+**Next step:** send me one masked Mongo document and a few `message` examples. I'll write `fetch_errors.py`, `normalize_cluster.py`, `copilot-instructions.md`, `triage.prompt.md`, and the Jira template to match your actual data.
