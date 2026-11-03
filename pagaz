@@ -1,0 +1,343 @@
+Task: Refactor the Existing Mongo Error Triage Workflow into a Two-Agent Architecture
+
+You are acting as a Senior AI Workflow Architect and GitHub Copilot Agent specialist.
+
+Your task is to analyze and improve my existing Mongo Error Triage workflow, which is implemented using GitHub Copilot Chat, custom skills, and supporting scripts.
+
+Do not rebuild the system from scratch. Extend and refactor the existing implementation while preserving everything that already works.
+
+1. Current Environment and Workflow
+
+My current workflow uses GitHub Copilot to investigate production/application errors using several internal sources and tools, including:
+
+- MongoDB
+- Kibana
+- OpenShift / Kubernetes
+- Application logs
+- Prometheus / Grafana, where relevant
+- Git repositories and source code
+
+The existing skill performs the investigation successfully.
+
+It gathers evidence, identifies potential root causes, generates an HTML investigation report, proposes fixes, interacts with me to refine those fixes, and eventually creates Jira tickets.
+
+The investigation stage is generally effective and should remain intact.
+
+However, the workflow becomes inefficient and unreliable during the transition from investigation to solution design and Jira creation.
+
+Typical problems include:
+
+- Fix suggestions that require multiple rounds of human correction.
+- Context and decisions getting lost during long conversations.
+- Copilot modifying previously agreed fixes when addressing new feedback.
+- Difficulty translating the final agreed solution into accurate Jira tickets.
+- Jira descriptions and acceptance criteria not consistently reflecting the final decisions.
+
+2. Target Architecture
+
+Refactor the workflow into two separate, specialized GitHub Copilot Agents.
+
+Agent 1: Triage Agent
+
+Purpose: Investigate incidents and establish an evidence-based understanding of the problem.
+
+Responsibilities:
+
+1. Investigate errors using the existing MongoDB, Kibana, OpenShift, Kubernetes, logging, monitoring, and other available integrations.
+2. Identify potential root causes.
+3. Collect supporting evidence.
+4. Identify affected services and relevant components.
+5. Analyze error patterns and correlations.
+6. Generate the existing HTML investigation report.
+7. Produce a structured investigation output for the next agent.
+
+Important constraints:
+
+- Preserve the existing investigation logic, tools, scripts, and successful capabilities.
+- Do not unnecessarily modify existing integrations.
+- Do not create Jira tickets.
+- Do not implement code fixes.
+- Do not attempt to own the entire resolution process.
+
+The Triage Agent's output should be a self-contained investigation package that can be consumed by another agent without requiring access to the original conversation.
+
+Agent 2: Engineering Agent
+
+Purpose: Transform investigation findings into technically sound, actionable engineering solutions.
+
+This agent is responsible for the engineering phase, not for repeating the investigation.
+
+Responsibilities:
+
+A. Understand the investigation
+
+- Read the structured investigation package.
+- Understand the root cause and supporting evidence.
+- Identify the relevant repositories, files, classes, functions, and dependencies.
+- Inspect the actual source code.
+- Trace relevant execution paths when necessary.
+- Understand the existing architecture and coding conventions.
+
+B. Independently evaluate proposed fixes
+
+Do not blindly accept the fixes proposed by the Triage Agent.
+
+Instead:
+
+- Evaluate whether each proposed fix actually addresses the root cause.
+- Check whether it is technically correct.
+- Consider alternative solutions.
+- Identify potential regressions and side effects.
+- Consider backward compatibility and operational impact.
+- Identify missing information or assumptions.
+
+Present concrete engineering recommendations with supporting reasoning.
+
+C. Interactive solution refinement
+
+This is an important part of the workflow.
+
+The agent must work interactively with me to finalize the engineering solution.
+
+It should:
+
+- Present proposed fixes individually.
+- Explain why each change is necessary.
+- Identify exactly which components and code locations are affected.
+- Clearly distinguish required changes from optional improvements.
+- Allow me to approve, reject, or modify individual fixes.
+- Apply my feedback precisely.
+- Preserve previously approved decisions when modifying another fix.
+- Avoid repeatedly reopening decisions that have already been finalized unless new evidence justifies it.
+
+Do not assume that the first proposed solution is correct.
+
+The goal is to reach a technically agreed solution with minimal unnecessary conversation.
+
+D. Finalize the engineering specification
+
+Once we agree on the solution, produce a final engineering specification.
+
+For each approved fix, include:
+
+- Problem being addressed.
+- Root cause.
+- Proposed solution.
+- Exact components/files potentially affected.
+- Required implementation changes.
+- Dependencies and prerequisites.
+- Potential risks.
+- Testing requirements.
+- Acceptance criteria.
+
+Rejected fixes must not appear as implementation tasks.
+
+3. Structured Handoff Between Agents
+
+Introduce a persistent, structured handoff mechanism.
+
+The agents must not depend on conversation history to transfer information.
+
+Prefer a machine-readable JSON artifact stored in the existing workflow's working directory.
+
+For example:
+
+"incident-investigation.json"
+
+The artifact should contain:
+
+- Incident identifier.
+- Original error details.
+- Investigation findings.
+- Root cause.
+- Evidence and source references.
+- Affected services.
+- Initial proposed fixes.
+- Relevant repository information.
+- Links to the HTML report.
+
+The Engineering Agent should maintain its own engineering output, for example:
+
+"engineering-resolution.json"
+
+This should contain:
+
+- Final approved fixes.
+- Rejected fixes.
+- User decisions.
+- Implementation details.
+- Testing requirements.
+- Jira-ready task specifications.
+- Approval status.
+
+Use a clear schema and validation mechanism.
+
+Avoid maintaining multiple conflicting versions of the same information.
+
+The latest approved engineering specification must be the single source of truth for Jira generation.
+
+4. Jira Creation
+
+Jira creation must be a separate, controlled phase.
+
+The Engineering Agent should generate Jira tickets exclusively from the approved engineering specification.
+
+It must not reinterpret the original investigation or invent additional requirements during ticket creation.
+
+For each Jira ticket, generate:
+
+- Summary.
+- Description.
+- Technical implementation details.
+- Root cause context.
+- Acceptance criteria.
+- Testing requirements.
+- Priority, where supported by the existing workflow.
+- Relevant labels and components.
+- Dependencies, where applicable.
+
+Before creating Jira tickets:
+
+1. Show me a complete preview.
+2. Verify that each ticket corresponds to an approved fix.
+3. Verify that no rejected fixes are included.
+4. Validate mandatory Jira fields.
+5. Ask for explicit approval.
+
+After creation:
+
+- Capture the Jira IDs and URLs.
+- Verify that the tickets were actually created.
+- Update the engineering specification with the resulting Jira references.
+- Report any failures without silently retrying potentially duplicate operations.
+
+Prefer deterministic scripts or existing Jira integrations for ticket creation and field validation instead of relying entirely on LLM-generated Jira payloads.
+
+5. Implementation Boundaries
+
+The new architecture should preserve human control.
+
+Neither agent may autonomously:
+
+- Create Jira tickets without my approval.
+- Modify production systems.
+- Commit or merge code changes without explicit authorization.
+- Change previously approved fixes without explaining why.
+
+The Engineering Agent may analyze code and prepare implementation plans, but actual code modifications must follow the existing authorization model.
+
+6. GitHub Copilot Implementation
+
+Use the existing GitHub Copilot capabilities and repository conventions.
+
+Inspect the current implementation before deciding how to implement the architecture.
+
+In particular:
+
+- Inspect the existing custom skill.
+- Inspect its supporting scripts and configuration.
+- Identify existing MCP integrations and available tools.
+- Inspect existing HTML report generation.
+- Inspect existing Jira creation logic.
+- Identify how the current workflow is invoked.
+
+Implement the two specialized agents using the appropriate GitHub Copilot custom agent configuration, such as ".agent.md" files, where supported by the existing environment.
+
+Reuse existing skills and scripts wherever possible.
+
+Do not duplicate investigation logic unnecessarily.
+
+The two agents should have clearly defined responsibilities and explicit handoff contracts.
+
+If the existing Copilot environment supports agent delegation, use it where appropriate. Otherwise, implement a simple explicit handoff through persistent artifacts and separate agent invocations.
+
+Do not assume that all tools or MCP integrations are automatically available to both agents. Inspect and configure their actual tool access.
+
+7. Migration Strategy
+
+Implement this incrementally.
+
+Phase 1 — Discovery
+
+- Inspect the current workflow.
+- Understand all existing capabilities.
+- Identify the current bottlenecks.
+- Map existing scripts, integrations, and files.
+- Document what must remain unchanged.
+
+Phase 2 — Architecture
+
+- Define the responsibilities of each agent.
+- Define the JSON schemas.
+- Define the handoff mechanism.
+- Define approval boundaries.
+
+Phase 3 — Implementation
+
+- Create the Triage Agent configuration while preserving the existing investigation behavior.
+- Create the Engineering Agent configuration.
+- Implement structured artifact generation and consumption.
+- Refactor Jira creation to consume the approved engineering specification.
+- Reuse existing functionality wherever possible.
+
+Phase 4 — Validation
+
+- Test the complete workflow using representative historical incidents.
+- Verify that the Triage Agent produces equivalent investigation results to the current implementation.
+- Verify that the Engineering Agent correctly consumes investigation artifacts.
+- Test multiple rounds of fix refinement.
+- Verify that previously approved decisions are preserved.
+- Verify Jira ticket accuracy.
+- Verify that rejected fixes never generate tickets.
+- Verify approval gates.
+
+Phase 5 — Documentation
+Update the relevant documentation with:
+
+- New architecture.
+- Agent responsibilities.
+- Invocation instructions.
+- Artifact formats.
+- Handoff process.
+- Jira creation process.
+- Troubleshooting instructions.
+
+8. Critical Requirements
+
+1. Do not break the existing working investigation process.
+2. Do not replace working MongoDB, Kibana, or OpenShift integrations without a compelling technical reason.
+3. Do not create unnecessary abstractions or infrastructure.
+4. Do not introduce a database or external service just to store handoff information.
+5. Prefer simple files and deterministic scripts for state management.
+6. Keep the implementation compatible with the existing development environment.
+7. Preserve existing functionality unless a change is explicitly justified.
+8. Avoid making the agents overly autonomous or allowing them to bypass human approval.
+9. Do not simply produce an architectural proposal. Implement the changes in the repository.
+10. If a critical assumption is unclear, inspect the existing implementation first. Ask me only when a decision genuinely requires my input.
+
+9. Expected Deliverables
+
+At completion, provide:
+
+1. A summary of the existing architecture and identified problems.
+2. A description of the new two-agent architecture.
+3. All newly created or modified agent configuration files.
+4. Updated or new scripts and schemas.
+5. The new invocation workflow.
+6. A description of the Jira generation changes.
+7. Test results.
+8. A list of any remaining limitations or manual steps.
+
+Final objective:
+
+I want to retain the excellent investigation capabilities I already have while making the engineering resolution process significantly more reliable, structured, and efficient.
+
+I should no longer need to manage a long, complicated Copilot conversation just to refine fixes and produce accurate Jira tickets.
+
+The Triage Agent should investigate.
+
+The Engineering Agent should think like a senior software engineer, challenge proposed fixes, collaborate with me, and produce an approved technical solution.
+
+Jira generation should be predictable and based strictly on that approved solution.
+
+Start by inspecting the existing implementation. Do not modify anything until you understand how the current workflow works and have identified a safe migration path.
