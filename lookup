@@ -1,0 +1,136 @@
+Optimizing the Error Triage Skill for 50 Collections
+
+Problem
+
+The current Error Triage Skill becomes very slow when investigating 50 MongoDB collections, primarily because of the time spent querying Kibana.
+
+The goal is to significantly reduce the total investigation time without compromising diagnostic accuracy, evidence quality, or the completeness of the final HTML report.
+
+Proposed Improvements
+
+1. Reduce the Number of Kibana Queries
+
+First, inspect how the skill currently searches Kibana.
+
+If it executes a separate query for each collection, determine whether multiple searches can be consolidated into fewer queries.
+
+- Use shared filters and Elasticsearch "terms" queries where appropriate.
+- If the underlying Kibana data model supports it, consider querying multiple collections in a single request.
+- If separate queries are necessary, investigate Elasticsearch "_msearch" to submit multiple searches in one HTTP request.
+
+Do not assume that all collections share the same index, schema, or search conditions. Validate compatibility before consolidating queries.
+
+Expected benefit: Reduce request overhead and unnecessary repeated work.
+
+2. Introduce Controlled Concurrency
+
+If queries cannot be consolidated, execute independent searches concurrently rather than sequentially.
+
+- Start with a configurable concurrency limit, such as 5 concurrent requests.
+- Measure response times and error rates.
+- Increase concurrency gradually if Kibana and Elasticsearch can handle the additional load.
+- Implement timeouts, retries with backoff, and appropriate handling of partial failures.
+
+Avoid launching all 50 queries simultaneously by default, as this could overload Kibana or Elasticsearch and make the overall investigation slower.
+
+Expected benefit: Reduce total wall-clock time while maintaining predictable system load.
+
+3. Minimize the Amount of Data Retrieved
+
+Optimize the queries so they return only the information needed for triage.
+
+- Apply the narrowest reasonable time range around the incident.
+- Filter by relevant service, environment, correlation ID, collection, or error type when available.
+- Request only the necessary fields using source filtering.
+- Limit the number of returned documents.
+- Prefer aggregations for initial statistics instead of retrieving every matching log entry.
+- Retrieve detailed log samples only when the initial results indicate that they are needed.
+
+The skill must preserve enough evidence to explain its conclusions. Do not discard potentially important errors merely to reduce response size.
+
+Expected benefit: Reduce query execution cost, network transfer, and the amount of data Copilot must process.
+
+4. Use a Two-Stage Investigation Strategy
+
+Instead of performing an equally deep investigation for all 50 collections, split the process into two stages.
+
+Stage A — Broad, lightweight scan
+
+Run inexpensive queries across the relevant collections to identify:
+
+- Error counts and error rates.
+- First and last occurrence timestamps.
+- New or unusual error signatures.
+- Relevant correlation IDs and shared failure patterns.
+- Collections with the strongest evidence of being related to the incident.
+
+Stage B — Targeted deep investigation
+
+Perform detailed log searches only for collections and error patterns identified as relevant in Stage A.
+
+Retain the ability to expand the investigation when evidence is inconclusive. Do not permanently exclude a collection solely because its initial error count is low.
+
+Expected benefit: Avoid spending the same amount of investigation time on every collection when only a subset may be relevant.
+
+5. Add Caching and Deduplication
+
+Inspect whether the skill repeats identical or overlapping Kibana queries during a single investigation.
+
+- Cache results for identical queries within the same run.
+- Reuse already retrieved logs and metadata.
+- Deduplicate overlapping log entries.
+- Avoid repeating searches when only the report format or analysis prompt changes.
+- If cross-run caching is introduced, use a short, configurable TTL and account for incident time windows and data freshness.
+
+Expected benefit: Eliminate redundant searches and reduce repeated processing.
+
+6. Add Performance Instrumentation
+
+Before and after optimization, measure the time spent in each stage:
+
+- Kibana query execution.
+- Number of queries issued.
+- Number of documents returned.
+- Response payload sizes.
+- Retry counts and timeouts.
+- Copilot analysis time.
+- MongoDB and OpenShift investigation time.
+- HTML report generation time.
+- Total end-to-end investigation duration.
+
+Record these metrics for each collection and each query where practical.
+
+This will establish whether Kibana query execution, request overhead, data volume, or downstream analysis is the actual bottleneck.
+
+Recommended Implementation Order
+
+1. Measure the current workflow to establish a baseline.
+2. Inspect the existing skill to understand how Kibana queries are generated and executed.
+3. Optimize query scope and returned fields without changing diagnostic logic.
+4. Add controlled concurrency where queries are independent.
+5. Introduce query consolidation or "_msearch" where supported by the existing Elasticsearch setup.
+6. Implement the two-stage investigation while preserving a fallback for inconclusive results.
+7. Add caching and deduplication where repeated work is confirmed.
+8. Benchmark the optimized skill against the existing implementation using the same incidents and inputs.
+
+Acceptance Criteria
+
+The optimization is successful only if it meets both performance and correctness requirements.
+
+- The total investigation time decreases measurably.
+- The number of Kibana requests decreases where consolidation is possible.
+- The skill preserves relevant error evidence and diagnostic conclusions.
+- The final HTML report retains its existing required sections and functionality.
+- Partial failures, timeouts, and incomplete results are explicitly reported.
+- The skill does not silently skip collections or present an incomplete investigation as complete.
+- The changes remain compatible with the existing skill architecture and access restrictions.
+
+Instructions to the Implementing Agent
+
+Inspect the existing Error Triage Skill and identify the actual source of the Kibana bottleneck before modifying the implementation.
+
+Prefer small, incremental changes that preserve the current workflow and output format. Do not redesign the entire skill, introduce unnecessary infrastructure, or assume that the skill uses a particular API or MCP integration without verifying it.
+
+Implement the highest-impact optimizations supported by the existing architecture, run the available tests, and provide a before-and-after performance comparison together with evidence that diagnostic quality has been preserved.
+
+If the current implementation uses the Kibana UI rather than a direct API, explicitly evaluate whether UI automation is the main source of overhead before proposing an API-based alternative. Any alternative must comply with the organization's authentication, authorization, and infrastructure policies.
