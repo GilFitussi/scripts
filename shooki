@@ -1,0 +1,579 @@
+Build a Repository Documentation Generator
+
+1. Mission
+
+Build a reusable, local-first Repository Documentation Generator that analyzes existing software repositories and generates high-quality, evidence-based technical and architectural documentation.
+
+The tool must combine:
+
+1. Tree-sitter for deterministic, local source-code parsing.
+2. A dependency and repository structure analyzer.
+3. GitHub Copilot for semantic analysis and documentation generation.
+4. A reusable GitHub Copilot Skill for triggering the documentation workflow.
+5. A CLI for running scans, managing analysis results, and validating generated documentation.
+
+The primary goal is to help developers and AI coding agents understand existing codebases, their architecture, module responsibilities, dependencies, and execution flows.
+
+This is NOT simply a README generator.
+
+The output must provide actionable technical context that helps GitHub Copilot understand an existing repository before making code changes.
+
+2. Critical Requirements
+
+Privacy and security
+
+- The scanner must run locally.
+- Source code must never be uploaded to any external analysis service by the scanner.
+- Do not introduce third-party hosted AI services.
+- GitHub Copilot is the only permitted AI analysis and generation mechanism.
+- The organization already uses GitHub Copilot.
+- Document clearly that Copilot may process source-code context through GitHub's cloud service.
+- Never claim that the complete workflow is offline.
+- Do not transmit source code, scan results, or repository metadata to unrelated services.
+- Never include secrets, credentials, tokens, private keys, or environment variable values in generated documentation.
+- Support configurable exclusions and sensitive-file detection.
+
+Repository safety
+
+- Never modify application source code.
+- Never modify existing configuration files.
+- Only create or update generated documentation in explicitly designated output locations.
+- Never overwrite existing documentation without explicit user approval.
+- Support dry-run mode.
+- Preserve existing user-authored documentation.
+
+Accuracy
+
+- Never invent architecture, dependencies, business logic, or execution flows.
+- Every important architectural conclusion must have supporting evidence.
+- Include file paths and relevant symbols as evidence.
+- Clearly distinguish verified facts from inferred conclusions.
+- Mark uncertain findings as requiring human review.
+
+3. Proposed Architecture
+
+Implement the following logical components:
+
+A. Repository Scanner
+
+Responsibilities:
+
+- Discover repository structure.
+- Identify programming languages and frameworks.
+- Detect project types and build systems.
+- Identify source files.
+- Exclude generated files, dependencies, binaries, and configured ignored paths.
+- Detect entry points.
+- Identify configuration files without exposing secrets.
+
+Use Tree-sitter for source-code parsing.
+
+The scanner must support a modular language architecture so additional languages can be added without redesigning the system.
+
+Start with support for:
+
+- TypeScript
+- JavaScript
+- Python
+- Java
+- Go
+
+Do not assume all languages have identical parsing capabilities.
+
+B. Tree-sitter Analysis Engine
+
+Extract, where supported:
+
+- Functions
+- Classes
+- Methods
+- Interfaces
+- Types
+- Imports
+- Exports
+- Function signatures
+- Class relationships
+- Module declarations
+- Calls and references where reliably identifiable
+- Decorators and annotations
+- Public API definitions
+
+Use Tree-sitter queries rather than relying on regular expressions for structural parsing.
+
+Build a normalized intermediate representation (IR) independent of the programming language.
+
+Each extracted symbol should include:
+
+- Symbol name
+- Symbol type
+- File path
+- Start and end locations
+- Signature, when available
+- Visibility, when identifiable
+- Related symbols
+- Extraction confidence
+
+Do not treat syntactic parsing as proof of runtime behavior.
+
+C. Dependency Analyzer
+
+Build a repository dependency graph.
+
+Identify:
+
+- File-to-file dependencies
+- Module-to-module dependencies
+- Import/export relationships
+- Internal package dependencies
+- External package dependencies
+- Potential circular dependencies
+- Main entry points
+- Important integration boundaries
+
+Resolve imports using language-specific resolution strategies.
+
+For JavaScript and TypeScript, consider:
+
+- Relative imports
+- Path aliases
+- tsconfig.json
+- package.json
+- Index/barrel exports
+
+Represent the graph in a normalized format.
+
+Do not claim that a dependency exists merely because two files share a name.
+
+D. Repository Structure Analyzer
+
+Identify logical modules and their responsibilities.
+
+Consider:
+
+- Directory structure
+- Package boundaries
+- Naming conventions
+- Imports and exports
+- Framework conventions
+- Build configuration
+- Existing documentation
+
+Produce a repository map with evidence supporting each module classification.
+
+E. GitHub Copilot Integration
+
+GitHub Copilot must perform the semantic analysis that static parsing cannot reliably provide.
+
+Create a reusable GitHub Copilot Skill that can be invoked from VS Code Copilot Chat.
+
+The Skill should:
+
+1. Read the local scanner output.
+2. Explore relevant source files.
+3. Analyze important execution paths.
+4. Understand module responsibilities.
+5. Trace business and technical flows.
+6. Identify architectural patterns.
+7. Generate documentation based on verified evidence.
+8. Identify gaps and uncertainties.
+9. Validate generated documentation against source files.
+
+Do not attempt to use an undocumented Copilot API.
+
+Use officially supported GitHub Copilot customization mechanisms.
+
+Keep the Skill compatible with the current VS Code GitHub Copilot agent workflow.
+
+F. CLI
+
+Provide a command-line interface.
+
+Suggested commands:
+
+repo-docs scan .
+repo-docs analyze .
+repo-docs generate .
+repo-docs validate .
+repo-docs update .
+
+Expected behavior:
+
+- "scan": Run local static analysis.
+- "analyze": Prepare structured analysis artifacts.
+- "generate": Trigger the documentation workflow through Copilot.
+- "validate": Validate generated documentation against analysis artifacts and source evidence.
+- "update": Re-scan and identify documentation affected by code changes.
+
+The CLI must not silently trigger external AI services.
+
+If a command requires Copilot interaction, clearly communicate that requirement.
+
+G. Incremental Analysis
+
+Support incremental scanning.
+
+- Detect changed files using Git when available.
+- Re-analyze only affected files.
+- Recalculate affected dependency relationships.
+- Identify documentation sections that may be outdated.
+- Preserve previously generated results when source files have not changed.
+
+Provide a full-scan fallback.
+
+4. Generated Documentation
+
+Generate the following documents.
+
+Repository root
+
+ARCHITECTURE.md
+
+Include:
+
+- System overview
+- High-level architecture
+- Main components
+- Module responsibilities
+- Architectural patterns
+- Integration boundaries
+- Important design decisions supported by code evidence
+
+AGENTS.md
+
+Provide practical instructions for AI coding agents:
+
+- Repository structure
+- Important modules
+- Where to find specific functionality
+- How modules interact
+- Coding conventions
+- Testing instructions
+- Build and execution instructions
+- Important dependencies
+- Areas requiring special care
+
+.github/copilot-instructions.md
+
+Provide concise repository-wide Copilot instructions.
+
+Focus on:
+
+- Project conventions
+- Architecture constraints
+- Important dependencies
+- Testing expectations
+- Code modification guidance
+
+Do not duplicate the entire AGENTS.md.
+
+docs/
+
+MODULES.md
+
+Document each logical module:
+
+- Responsibility
+- Main files
+- Public interfaces
+- Dependencies
+- Important internal relationships
+
+DATA-FLOW.md
+
+Document important execution and data flows:
+
+- Entry point
+- Main processing stages
+- Important function calls
+- Data transformations
+- External integrations
+- Error handling paths where identifiable
+
+DEPENDENCIES.md
+
+Document:
+
+- Internal dependencies
+- External dependencies
+- Important dependency relationships
+- Circular dependency findings
+- Architectural coupling observations
+
+ENTRY-POINTS.md
+
+Document:
+
+- Application entry points
+- API entry points
+- Event handlers
+- Consumers
+- Scheduled jobs
+- CLI commands
+- Background workers
+
+Only document entry-point types relevant to the repository.
+
+5. Documentation Quality Requirements
+
+Documentation must be useful to both developers and AI agents.
+
+Avoid:
+
+- Generic explanations
+- Repeating source code
+- Unverified assumptions
+- Large inventories without meaningful grouping
+- Describing framework behavior as custom application logic
+- Excessively verbose documentation
+
+Prefer:
+
+- Concise explanations
+- Concrete file references
+- Symbol references
+- Relationships between modules
+- Important execution flows
+- Clear architectural boundaries
+
+Include evidence references in the generated documents.
+
+Where possible, use this format:
+
+Claim: The API service delegates persistence to the repository layer.
+
+Evidence:
+- src/api/user.controller.ts
+- src/repositories/user.repository.ts
+- UserController.create()
+- UserRepository.save()
+
+6. Validation Engine
+
+Implement automated checks.
+
+Validate:
+
+- Referenced files exist.
+- Referenced symbols exist.
+- Documented modules correspond to actual repository structure.
+- Documented dependencies exist in the analysis graph.
+- No excluded or sensitive files were included.
+- Generated documents follow the expected templates.
+- Documentation does not contradict known static analysis results.
+
+Provide a validation report with:
+
+- Passed checks
+- Failed checks
+- Warnings
+- Unsupported conclusions
+- Findings requiring human review
+
+7. Suggested Project Structure
+
+Use a modular architecture similar to:
+
+repo-documentation-generator/
+│
+├── src/
+│   ├── cli/
+│   │
+│   ├── scanner/
+│   │   ├── file-discovery/
+│   │   ├── tree-sitter/
+│   │   └── language-adapters/
+│   │
+│   ├── analysis/
+│   │   ├── symbol-extractor/
+│   │   ├── dependency-analyzer/
+│   │   ├── module-analyzer/
+│   │   └── entry-point-detector/
+│   │
+│   ├── integration/
+│   │   └── copilot/
+│   │
+│   ├── generation/
+│   │   ├── templates/
+│   │   └── documentation/
+│   │
+│   ├── validation/
+│   │
+│   └── shared/
+│
+├── .github/
+│   └── skills/
+│       └── generate-documentation/
+│           └── SKILL.md
+│
+├── templates/
+│
+├── tests/
+│
+├── examples/
+│
+├── README.md
+└── package.json
+
+You may adjust the structure if there is a clear technical reason.
+
+8. Technology Choices
+
+Prefer:
+
+- TypeScript for the implementation.
+- Node.js for runtime.
+- Tree-sitter with maintained language grammars.
+- A normalized JSON intermediate representation.
+- Markdown for documentation.
+- Git for change detection.
+
+Keep dependencies minimal.
+
+Avoid introducing:
+
+- Hosted AI APIs
+- External vector databases
+- Unnecessary MCP servers
+- Unnecessary infrastructure
+- Cloud-based repository scanners
+
+Do not assume that MCP is required for Copilot integration.
+
+9. Testing Strategy
+
+Create representative test repositories covering:
+
+- Small TypeScript project
+- Large TypeScript project
+- JavaScript project
+- Python project
+- Multi-module project
+- Monorepo
+- Circular dependencies
+- Path aliases
+- Barrel exports
+- Missing or incomplete configuration
+- Sensitive files
+- Large generated directories
+
+Test:
+
+- Parsing accuracy
+- Dependency resolution
+- Incremental scanning
+- Documentation validation
+- Exclusion behavior
+- Existing documentation preservation
+
+Provide automated unit and integration tests.
+
+10. Development Workflow
+
+Do not implement everything in one large step.
+
+Follow these phases:
+
+Phase 1 – Design
+
+- Inspect requirements.
+- Define architecture.
+- Define the intermediate representation.
+- Define module contracts.
+- Identify technical risks.
+- Present the design before implementation.
+
+Phase 2 – Core Scanner
+
+- Implement file discovery.
+- Implement Tree-sitter integration.
+- Implement language adapters.
+- Implement symbol extraction.
+- Implement normalized analysis output.
+- Add tests.
+
+Phase 3 – Dependency Analysis
+
+- Implement dependency graph.
+- Implement module detection.
+- Implement entry-point detection.
+- Add tests.
+
+Phase 4 – Copilot Integration
+
+- Create the GitHub Copilot Skill.
+- Define the semantic analysis workflow.
+- Define prompts and output contracts.
+- Ensure no unsupported Copilot APIs are used.
+
+Phase 5 – Documentation Generation
+
+- Implement all document templates.
+- Generate evidence-based documentation.
+- Add human-review checkpoints.
+
+Phase 6 – Validation and Incremental Updates
+
+- Implement validation.
+- Implement Git-based change detection.
+- Implement incremental analysis.
+- Test against representative repositories.
+
+Phase 7 – Finalization
+
+- Complete README.
+- Document installation.
+- Document usage.
+- Document supported languages and limitations.
+- Provide example output.
+- Provide a security and privacy explanation.
+
+11. Engineering Rules
+
+- Prioritize maintainability and extensibility.
+- Keep parsing logic separate from documentation generation.
+- Keep language-specific logic isolated.
+- Use typed interfaces.
+- Handle parsing errors gracefully.
+- Never fail the entire scan because of one unsupported file.
+- Provide meaningful logging and progress information.
+- Support cancellation for long-running operations.
+- Do not silently discard analysis failures.
+- Avoid premature optimization.
+- Do not build abstractions without a real use case.
+
+12. Definition of Done
+
+The project is complete when:
+
+1. It can scan an existing repository locally.
+2. Tree-sitter extracts meaningful structural information.
+3. A dependency graph is generated.
+4. The scanner produces normalized analysis artifacts.
+5. GitHub Copilot can use the artifacts through a reusable Skill.
+6. All requested documentation files can be generated.
+7. Documentation includes source evidence.
+8. Validation detects broken references and inconsistencies.
+9. Existing source code remains untouched.
+10. Existing documentation is preserved unless explicitly approved for replacement.
+11. Automated tests pass.
+12. The tool can be reused across different repositories.
+
+13. First Action
+
+Start by inspecting the development environment and proposing the implementation architecture.
+
+Do not immediately generate all source files.
+
+First provide:
+
+- Proposed architecture
+- Component responsibilities
+- Technology choices
+- Tree-sitter grammar strategy
+- GitHub Copilot integration strategy
+- Security considerations
+- Initial implementation milestones
+
+Wait for approval before beginning implementation.
+
+The final result must be a reusable developer tool, not a one-off script.
