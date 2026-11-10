@@ -1,0 +1,532 @@
+Repository Documentation Generation Instructions
+
+1. Objective
+
+Analyze the existing repository and generate a comprehensive, modular Markdown documentation structure that helps developers and AI coding agents understand, navigate, maintain, and safely modify the project.
+
+The documentation must be:
+
+- Based on actual source code and configuration.
+- Accurate and verifiable.
+- Modular, with clearly defined responsibilities.
+- Useful for both human developers and AI coding agents.
+- Concise and free from unnecessary duplication.
+- Consistent with the repository's actual implementation.
+
+Do not modify application source code. This task is documentation-only.
+
+---
+
+2. Mandatory Two-Phase Workflow
+
+The documentation generation process MUST follow two strictly separated phases.
+
+Phase 1: Repository Analysis (Read-Only)
+
+Before creating or modifying any documentation files, perform a comprehensive analysis of the repository.
+
+During this phase:
+
+1. Explore the repository structure.
+2. Identify relevant source files, modules, and components.
+3. Analyze application entry points and execution flows.
+4. Identify programming languages, frameworks, and dependencies.
+5. Analyze configuration and environment requirements.
+6. Understand component relationships and architectural boundaries.
+7. Identify database schemas, APIs, and external integrations.
+8. Examine existing tests and CI/CD pipelines.
+9. Review existing documentation.
+10. Identify architectural patterns and coding conventions.
+11. Understand important business logic and workflows.
+12. Identify generated files and automatically maintained directories.
+
+Mandatory restrictions during Phase 1:
+
+- Do NOT create, modify, or delete any files.
+- Do NOT generate partial documentation.
+- Do NOT modify application source code.
+- Do NOT make assumptions based on filenames or directory names alone.
+- Do NOT start writing documentation before completing the analysis.
+
+At the end of Phase 1, build a structured internal repository analysis containing:
+
+- Repository overview.
+- Technology stack.
+- Architecture map.
+- Module and dependency map.
+- Data flow overview.
+- Development and testing workflows.
+- External integrations.
+- Important business logic.
+- Identified documentation topics.
+- Missing or unverifiable information.
+
+Phase 2: Documentation Generation
+
+Only after completing Phase 1, begin generating the Markdown documentation files.
+
+Requirements:
+
+1. Use the analysis from Phase 1 as the foundation for all documentation.
+2. Generate only documentation files relevant to the actual repository.
+3. Ensure consistency between all generated files.
+4. Avoid duplicating information.
+5. Reference actual source files and implementation details.
+6. Clearly distinguish verified facts from unknown information.
+7. Validate all generated documentation against the repository.
+
+Do not restart repository analysis unnecessarily unless new information is discovered during documentation generation.
+
+Critical rule: Understand the repository first, document it second.
+
+---
+
+3. Core Documentation Files
+
+Generate the following files in the repository root whenever sufficient information exists.
+
+README.md
+
+Provide a high-level introduction to the project:
+
+- Project purpose and overview.
+- Main capabilities.
+- Technology stack.
+- Repository prerequisites.
+- Installation and setup instructions.
+- How to run the application.
+- Links to relevant documentation files.
+
+AGENTS.md
+
+Provide general instructions for AI coding agents:
+
+- Project overview.
+- Important architectural constraints.
+- Coding conventions.
+- Development workflow.
+- Testing requirements.
+- Critical rules and restrictions.
+- Links to more detailed documentation.
+
+Keep this file concise. It should act as an entry point rather than duplicate all project documentation.
+
+ARCHITECTURE.md
+
+Document the system architecture:
+
+- Architectural style and design patterns.
+- Main components and their responsibilities.
+- Component dependencies and interactions.
+- Internal communication mechanisms.
+- Data flow between components.
+- Important architectural constraints.
+- External system interactions.
+
+Include Mermaid diagrams when they materially improve understanding.
+
+PROJECT_STRUCTURE.md
+
+Document the repository structure:
+
+- Main directories and their purposes.
+- Important files and their responsibilities.
+- Module organization.
+- Entry points.
+- Configuration locations.
+- Generated or automatically maintained directories.
+
+Avoid listing every file in the repository. Focus on meaningful structural elements.
+
+DEVELOPMENT.md
+
+Document the development environment:
+
+- Required tools and runtimes.
+- Installation instructions.
+- Environment configuration.
+- Local development commands.
+- Build and execution commands.
+- Debugging instructions.
+- Development workflow.
+
+Only document commands that can be verified from the repository.
+
+CODING_STANDARDS.md
+
+Document the project's actual coding conventions:
+
+- Naming conventions.
+- File and module organization.
+- Error handling.
+- Logging.
+- Asynchronous programming patterns.
+- Dependency injection, if applicable.
+- Code formatting and linting.
+- Recommended implementation patterns.
+
+Prefer conventions observed in existing code over generic best practices.
+
+TESTING.md
+
+Document the testing strategy:
+
+- Testing frameworks.
+- Test types.
+- Test directory structure.
+- Test naming conventions.
+- How to execute tests.
+- Mocking and test data strategies.
+- Coverage requirements, if configured.
+- CI testing behavior.
+
+DEPENDENCIES.md
+
+Document important dependencies:
+
+- Main frameworks and libraries.
+- Their responsibilities.
+- Important internal dependencies.
+- External services and SDKs.
+- Critical version constraints.
+- Dependencies that should not be replaced without architectural review.
+
+Do not simply copy the entire package manifest.
+
+---
+
+4. Additional Documentation Files
+
+Create the following files only when relevant information exists in the repository.
+
+API.md
+
+Document:
+
+- API endpoints.
+- HTTP methods.
+- Request and response structures.
+- Authentication requirements.
+- Error responses.
+- API versioning.
+
+DATA_MODEL.md
+
+Document:
+
+- Main data entities.
+- Database schemas and collections.
+- Relationships.
+- Important fields.
+- Validation rules.
+- Indexes and constraints.
+- Data lifecycle.
+
+SECURITY.md
+
+Document:
+
+- Authentication and authorization.
+- Secrets management.
+- Permission models.
+- Input validation.
+- Security-sensitive operations.
+- Security-related configuration.
+
+Never expose actual credentials, tokens, secrets, or sensitive production values.
+
+DEPLOYMENT.md
+
+Document:
+
+- Build pipeline.
+- Deployment architecture.
+- Deployment environments.
+- Container configuration.
+- CI/CD workflows.
+- Release process.
+- Rollback procedures, if documented.
+
+INTEGRATIONS.md
+
+Document:
+
+- External systems.
+- Third-party APIs.
+- Messaging systems.
+- Event-driven integrations.
+- Authentication between systems.
+- Integration failure handling.
+
+BUSINESS_LOGIC.md
+
+Document:
+
+- Core business rules.
+- Important workflows.
+- Business validations.
+- Domain-specific constraints.
+- Important state transitions.
+
+Only document behavior supported by source code or explicitly available documentation.
+
+FLOWS.md
+
+Document:
+
+- Important application workflows.
+- Request lifecycle.
+- Event processing.
+- Background jobs.
+- Data processing pipelines.
+- Interactions between major components.
+
+Use Mermaid sequence diagrams or flowcharts where appropriate.
+
+TROUBLESHOOTING.md
+
+Document:
+
+- Known issues.
+- Common runtime errors.
+- Configuration problems.
+- Debugging techniques.
+- Recovery procedures.
+
+Only include verified or explicitly documented issues.
+
+GLOSSARY.md
+
+Document:
+
+- Domain terminology.
+- Important technical terms.
+- Project-specific abbreviations.
+- Definitions of important concepts.
+
+---
+
+5. Architecture Decision Records (ADRs)
+
+Create a "docs/decisions/" directory when architectural decisions can be identified.
+
+Use individual files:
+
+- ADR-001.md
+- ADR-002.md
+- ADR-003.md
+
+Each ADR should contain:
+
+- Title.
+- Status (Accepted, Proposed, Deprecated, Superseded).
+- Context.
+- Decision.
+- Consequences.
+- Related components.
+
+Important:
+
+- Do not invent historical architectural decisions.
+- Do not assume that the current implementation reflects the original design intention.
+- If the reasoning behind an implementation choice cannot be established, document the observed implementation without claiming to know why it was chosen.
+
+---
+
+6. AI Agent Instructions
+
+Create additional GitHub Copilot instructions when they provide meaningful value.
+
+Suggested structure:
+
+.github/
+  copilot-instructions.md
+  instructions/
+    backend.instructions.md
+    frontend.instructions.md
+    database.instructions.md
+    testing.instructions.md
+  prompts/
+
+Requirements:
+
+- "copilot-instructions.md" should contain general repository-wide guidance.
+- Use path-specific instruction files for technologies or directories that require different rules.
+- Use appropriate file matching patterns where supported.
+- Avoid duplicating the content of AGENTS.md.
+- Do not generate empty or unnecessary instruction files.
+- Do not create prompt templates unless there are clearly recurring development tasks that justify them.
+
+---
+
+7. Documentation Accuracy Rules
+
+These rules are mandatory.
+
+1. Never invent functionality, architecture, configuration, or business behavior.
+2. Never assume a technology is used just because it is common in similar projects.
+3. Verify every command against package manifests, scripts, configuration, or CI definitions.
+4. Distinguish between verified facts and reasonable observations.
+5. Mark information that cannot be verified as "Unknown" or "Not identified".
+6. Do not expose secrets or sensitive configuration values.
+7. Avoid duplicating information across documentation files.
+8. Reference relevant source files and directories whenever possible.
+9. Do not document generated files as manually maintained source files.
+10. Do not modify application code, configuration, or dependencies.
+11. Do not present assumptions as confirmed facts.
+12. Do not create documentation simply to fill a predefined list of files.
+
+---
+
+8. Source Code Analysis Strategy
+
+During Phase 1, use the following analysis strategy:
+
+1. Inspect the repository root.
+2. Identify programming languages and frameworks.
+3. Inspect package manifests and dependency definitions.
+4. Inspect application entry points.
+5. Analyze the main modules and their dependencies.
+6. Inspect configuration files.
+7. Inspect existing tests.
+8. Inspect CI/CD configuration.
+9. Identify database and external service integrations.
+10. Analyze important business logic.
+11. Identify application execution and data flows.
+12. Review existing documentation and reuse valid information.
+
+Build an internal understanding of the repository before writing documentation.
+
+Do not generate documentation based solely on directory names or file names.
+
+For large repositories, analyze the project in logical modules and progressively build a complete dependency and architecture map before proceeding to Phase 2.
+
+---
+
+9. Documentation Quality Requirements
+
+Every generated file must:
+
+- Have a clear and specific purpose.
+- Use consistent Markdown formatting.
+- Include meaningful headings.
+- Be easy to navigate.
+- Avoid unnecessary verbosity.
+- Reference relevant source files when useful.
+- Avoid repeating information available in other documentation files.
+- Use relative links between documentation files.
+- Clearly indicate when information is incomplete or unverified.
+
+Prefer Mermaid diagrams over large textual descriptions when diagrams improve clarity.
+
+---
+
+10. Conditional Documentation Generation
+
+Not every repository requires every documentation file.
+
+Use the following decision rules:
+
+- Generate core documentation files whenever sufficient information exists.
+- Generate API.md only if an API or meaningful interface exists.
+- Generate DATA_MODEL.md only if the project contains meaningful data models or persistence.
+- Generate SECURITY.md when security-sensitive functionality or configuration exists.
+- Generate DEPLOYMENT.md when deployment configuration or processes can be identified.
+- Generate INTEGRATIONS.md when external integrations exist.
+- Generate BUSINESS_LOGIC.md when meaningful domain rules exist.
+- Generate FLOWS.md when important workflows can be identified.
+- Generate TROUBLESHOOTING.md only when useful troubleshooting information exists.
+- Generate GLOSSARY.md only when project-specific terminology justifies it.
+- Generate ADRs only when actual decisions and their context can be established.
+
+Do not create empty placeholder files.
+
+---
+
+11. Existing Documentation Handling
+
+Before generating documentation, inspect all existing Markdown files and documentation directories.
+
+Follow these rules:
+
+1. Preserve existing valid information.
+2. Update outdated documentation when it can be verified against the code.
+3. Avoid creating duplicate documentation files.
+4. Do not overwrite manually maintained documentation without reviewing its content.
+5. Preserve useful project-specific explanations that cannot be inferred from source code.
+6. Clearly distinguish automatically generated information from manually maintained information when appropriate.
+
+Do not delete existing documentation unless explicitly authorized.
+
+---
+
+12. Final Validation
+
+After generating the documentation:
+
+1. Verify that every documented file and directory exists.
+2. Verify all internal Markdown links.
+3. Verify all commands against repository configuration.
+4. Check for duplicated or contradictory information.
+5. Check that no secrets or sensitive values were included.
+6. Check that documentation reflects the actual implementation.
+7. Ensure AGENTS.md provides a useful entry point to the documentation.
+8. Ensure all Mermaid diagrams are syntactically valid.
+9. Ensure no application source code was modified.
+10. Ensure no unnecessary documentation files were created.
+
+---
+
+13. Final Report
+
+At the end, provide a summary containing:
+
+Documentation Generated
+
+List all documentation files created or updated.
+
+Documentation Skipped
+
+List relevant files that were not generated and explain why.
+
+Repository Analysis
+
+Summarize:
+
+- Main architectural findings.
+- Technologies and frameworks identified.
+- Important components and integrations.
+- Main execution and data flows.
+
+Uncertainties
+
+List important information that could not be verified and requires human input.
+
+Recommendations
+
+Suggest additional documentation or clarification that could improve the repository's maintainability.
+
+Changes Verification
+
+Confirm that:
+
+- Only documentation files were created or modified.
+- No application source code was changed.
+- Existing documentation was preserved where appropriate.
+- Internal links and documented commands were validated.
+
+---
+
+14. Final Principles
+
+The following principles must guide the entire process:
+
+1. Analyze first, document second. Never generate documentation based on incomplete repository understanding.
+2. Accuracy over completeness. A smaller set of accurate documentation files is better than a large set of speculative files.
+3. Single Source of Truth. Avoid maintaining the same information in multiple places.
+4. Modularity. Each documentation file must have a clearly defined responsibility.
+5. Traceability. Important technical claims should be traceable to actual source code or configuration.
+6. Maintainability. Documentation should remain useful as the project evolves.
+7. AI-friendly structure. AI agents should be able to quickly discover relevant project information without loading unnecessary documentation.
+
+The final result should provide developers and AI coding agents with a reliable understanding of the repository without requiring them to repeatedly rediscover its architecture and implementation details.
