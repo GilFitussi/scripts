@@ -1,0 +1,98 @@
+# Task: Make the error-triage script stateful and idempotent (scan / plan / apply / adopt)
+
+## Context
+
+I (a developer) was asked by my manager to do error triage: go over MongoDB objects that are in an error state, find out why they failed, and open a Jira bug for each distinct error.
+
+I already have a working script that:
+1. Pulls all errored objects from MongoDB (documents have an `error` field and an error ID field).
+2. Groups them by error ("kind" / error type).
+3. Investigates each group in Kibana and in OpenShift (`oc`) logs.
+4. Writes an HTML report per kind and saves everything I need locally.
+5. Originally also created Jira tickets automatically.
+
+Tools in my environment: MongoDB, Kibana, OpenShift (`oc`), Jira. I also use Copilot (reads logs, gives recommendations that I review manually) and Devin AI (fixes bugs, but has NO access to Kibana/OpenShift/Mongo, so it must work from files saved locally and from Jira).
+
+## The problem
+
+The script is a one-shot snapshot. Every run treats the world as if there were no history. As a result, Jira got out of sync:
+- Some errors that were reported no longer appear in Mongo (maybe fixed as a side effect of another fix, or they simply did not occur in the time window).
+- New errors appeared that were never reported.
+- Re-running created duplicates or left stale tickets, so Jira is now messy.
+
+I need one tool I can run repeatedly that does everything correctly, and that is easy to maintain.
+
+## Core idea
+
+Turn the script into a reconciliation process. On each run, compare what exists in Mongo now with what is already known (local state + Jira), and act only on the difference.
+
+## Design
+
+### 1. Stable fingerprint per error group
+- Each error group gets a deterministic fingerprint, computed from `kind + error` after normalization (strip IDs, timestamps, numbers and other variable parts so the same logical error always yields the same fingerprint).
+- This is the most critical part. An unstable fingerprint causes duplicates in Jira.
+- Implement it as one isolated, well-tested function. Include unit tests with realistic examples.
+- Before implementing, inspect real Mongo error documents (the `error` and error ID fields) and propose the normalization rules. Ask me for sample documents if needed.
+
+### 2. Local state store
+- One persistent store (SQLite preferred; JSON acceptable if the volume is small).
+- Per fingerprint store: `first_seen`, `last_seen`, occurrence count, Jira key (if any), status (`new / reported / ignored / gone`), and the number of consecutive runs in which it was absent.
+- State is updated ONLY after the corresponding Jira action succeeded (in `apply`), so the state never claims a ticket exists when it does not.
+
+### 3. Jira is the secondary source of truth
+- Every Jira ticket created or adopted by this tool gets a label that contains the fingerprint (e.g. `triage` plus `fp-<hash>`), so the tool can fetch its own tickets with one query and know which ticket belongs to which error without parsing free text.
+- Division of responsibility: Jira = status of the bug; local state = which error maps to which ticket, and when it was seen.
+- If the local state is lost or I move machines, it must be possible to rebuild most of it from Jira labels.
+
+### 4. Diff logic on each run
+Compare current Mongo errors against state:
+- **New** (fingerprint not in state): investigate in Kibana/oc, then propose creating a Jira.
+- **Still present** (in state, still in Mongo): update `last_seen` and count. Do nothing in Jira.
+- **Gone** (in state, not in Mongo now): mark as `gone` and propose closing the Jira. Never auto-close. Make it configurable to require N consecutive absent runs before proposing closure, because the error may simply not have occurred in the time window.
+- **Reappeared** (was `gone`, now back): propose reopening the existing Jira instead of creating a new one.
+- Before diffing, sync ticket statuses from Jira (read-only), so tickets closed or changed manually are respected.
+
+### 5. Separate commands (each does one thing and saves results to local files)
+- `scan`: pull from Mongo, group, fingerprint, investigate in Kibana and OpenShift, write per-kind HTML reports and JSON results locally. Does NOT touch Jira. This is the slow, expensive part. It should be possible to re-run `plan` many times without re-scanning.
+- `plan`: read the scan output, sync statuses from Jira (read-only), compare with state, and write `plan.json` listing: Jira tickets to open, to close, to reopen, to update. I review and can edit/delete entries from this file.
+- `apply`: execute `plan.json` against Jira. After each successful action, update the state. Must be safe to re-run and to resume if interrupted.
+- `adopt`: one-time command for existing tickets (see below).
+- `run`: runs `scan` then `plan`, prints a readable summary of what it intends to do, and STOPS for my approval. Optionally a `--yes` flag to skip approval (off by default; I will decide later whether to use it).
+- Every command that changes Jira supports `--dry-run`.
+
+### 6. Adopting the existing Jira tickets (`adopt` command)
+I already have many tickets and do NOT want to close them. Add a command that:
+1. Fetches all relevant existing tickets and saves a local backup (old summary, labels, etc.) so changes can be reverted.
+2. For each ticket, derives the fingerprint from its description/summary/error ID, using the same fingerprint function as the main flow.
+3. Produces `adopt-plan.json` with before/after for each ticket: old summary, new summary, label to add. I review and edit it, then `apply` executes it.
+4. Changes: rewrite the summary into a single consistent format, e.g. `[kind] short error description`, defined in ONE function that is also used when creating new tickets; and add the fingerprint label.
+5. Idempotent: tickets that already have the label are skipped, so it can be re-run or resumed.
+6. Tickets for which a fingerprint cannot be computed are NOT modified; label them `triage-unmatched` and list them in the output so I can review them manually once.
+7. Detect duplicates (several tickets with the same fingerprint). Propose keeping one and linking/closing the others as duplicates, but only as proposals in the plan, never automatically.
+8. Recommended rollout: first version of `adopt` only adds labels (safe and easily reversible), then summary rewriting, then duplicate handling in a later pass.
+9. After `adopt` runs, the regular flow needs no special cases for old tickets, and `adopt` can be deleted or ignored.
+
+### 7. Safety checks
+- Verify that my Jira API credentials can edit and close tickets, not only create them.
+- Check whether closing a ticket triggers a workflow that notifies other people. If it does, prefer labeling stale tickets (e.g. `triage-stale`) instead of closing.
+
+## Maintainability requirements
+- Small modules with a single responsibility: `fetch` (Mongo), `fingerprint`, `analyze` (Kibana/oc), `state`, `jira`, `report` (HTML), and a thin CLI.
+- One config file for everything that changes: time window, list of kinds, Jira project, labels, N for the "gone" threshold, summary format, paths.
+- Adding a new kind should be a one- or two-line change.
+- Local files are readable and documented so Devin can work from them without access to Kibana/Mongo/OpenShift (each saved result should contain enough context: error, fingerprint, occurrences, log findings, links).
+- Clear README, and tests at least for fingerprinting and the diff logic.
+
+## Suggested build order
+1. Fingerprint function + state store + diff logic, with NO Jira. Run it twice against real data and verify that the new / still present / gone / reappeared categories make sense.
+2. Wire `scan` to produce the local files and HTML reports.
+3. Jira read-only sync, then `plan`.
+4. `apply` with state updates only after success.
+5. `adopt` (labels first), with backup and dry-run.
+6. `run` wrapper with the approval stop.
+
+## Questions to ask me before or while building
+- Show me sample Mongo error documents (the `error` and error ID fields), and I will provide them so you can design the normalization.
+- Which Jira project, and how can existing tickets be identified (label, creation date, text format)?
+- What time window defines "currently present" in Mongo?
+- What should N be for the "gone" threshold?
